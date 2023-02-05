@@ -267,14 +267,14 @@ var app = new Vue({
         }
       }
       
-      app.heatpump_COP = get_ecodan_cop(app.Thi,app.outside,app.radiator_output/5.0)
+      app.heatpump_COP = get_ecodan_cop(app.Thi,app.outside,app.radiator_output/5000)
       // app.heatpump_COP = heatpump_COP(app.Thi,app.outside)
       
       var dT = Math.pow(app.radiator_output/app.rated_output,1/1.3) * app.rated_dT
       var MWT = app.room + dT
       var T_flow = MWT + app.radiator_output / (2*app.Cph*app.mh)
 
-      app.heatpump_COP_compare = get_ecodan_cop(T_flow,app.outside,app.radiator_output/5.0)
+      app.heatpump_COP_compare = get_ecodan_cop(T_flow,app.outside,app.radiator_output/5000)
       //app.heatpump_COP_compare = heatpump_COP(T_flow,app.outside)
       
       // Search for heat output from radiators at given flow temperature and flow rate
