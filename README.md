@@ -1,2 +1,1 @@
-# heatexchanger
-heat pump heat exchanger calculator
+# heat pump heat exchanger calculator
