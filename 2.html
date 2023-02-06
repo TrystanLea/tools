@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Heat pump & heat exchanger calculator</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+  <script src="ecodan.js"></script>
+</head>
+<body>
+
+<div class="container" style="max-width:800px" id="app">
+  <div class="row">
+    <div class="col">
+      <br>
+      <h3>Heat pump & heat exchanger calculator</h3>
+      <p>Calculate heat output and COP for a system with a counterflow plate heat exchanger between the heat pump and the radiator system. Calculation based on effectiveness NTU method [1].</p>
+    </div>
+  </div>
+  <hr>
+
+  <div class="row">
+    <div class="col">   
+      <label class="form-label">Room temperature</label>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" v-model.number="room" @change="update"> 
+        <span class="input-group-text">°C</span>
+      </div>
+    </div>
+    <div class="col"> 
+      <label class="form-label">Outside temperature</label>     
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" v-model.number="outside" @change="update">
+        <span class="input-group-text">°C</span>
+      </div>
+    </div>
+    <div class="col"> 
+      <label class="form-label">Heat output</label>     
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" v-model.number="heatpump_output" @change="update" style="background-color:#fed">
+        <span class="input-group-text">W</span>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">   
+      <label class="form-label">Heat exchanger heat transfer rate</label>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" v-model.number="htc" @change="update">
+        <span class="input-group-text">W/m2.K</span>
+      </div>
+    </div>
+    <div class="col"> 
+      <label class="form-label">Heat exchanger Area</label>     
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" v-model.number="area" @change="update">
+        <span class="input-group-text">m2</span>
+      </div>
+    </div>
+  </div>
+  <br>
+  
+  <div class="row">
+    <div class="col">
+      <table class="table">
+        <tr>
+          <th></th>
+          <th max-width="250px">Heat pump side (Primary)</th>
+          <th max-width="250px">Radiator side (Secondary)</th>
+        </tr>
+        <tr>
+          <td>Flow rate</td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" v-model.number="mh_lmin" @change="update">
+              <span class="input-group-text">L/min</span>
+            </div>
+          </td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" v-model.number="mc_lmin" @change="update">
+              <span class="input-group-text">L/min</span>
+            </div>
+          </td>          
+        </tr>
+        <tr>
+          <td>Heat capacity</td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" v-model.number="Cph" @change="update">
+              <span class="input-group-text">J/kg.K</span>
+            </div>
+          </td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" v-model.number="Cpc" @change="update">
+              <span class="input-group-text">J/kg.K</span>
+            </div>
+          </td>           
+        </tr>
+        <tr>
+          <td>Flow temperature</td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" :value="Thi | toFixed(1)" disabled>
+              <span class="input-group-text">°C</span>
+            </div>
+          </td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" :value="Tco | toFixed(1)" disabled>
+              <span class="input-group-text">°C</span>
+            </div>
+          </td>            
+        </tr>        
+        <tr>
+          <td>Return temperature</td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" :value="Tho | toFixed(1)" disabled>
+              <span class="input-group-text">°C</span>
+            </div>
+          </td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" :value="Tci | toFixed(1)" disabled>
+              <span class="input-group-text">°C</span>
+            </div>
+          </td>         
+        </tr> 
+        <tr>
+          <td>Mean water temperature</td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" :value="(Thi+Tho)*0.5 | toFixed(1)" disabled>
+              <span class="input-group-text">°C</span>
+            </div>
+          </td>
+          <td>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control" :value="(Tci+Tco)*0.5 | toFixed(1)" disabled>
+              <span class="input-group-text">°C</span>
+            </div>
+          </td>            
+        </tr> 
+      </table>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">   
+      <label class="form-label">Rated radiator output [2]</label>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" v-model.number="rated_output" @change="update">
+        <span class="input-group-text">W</span>
+      </div>
+    </div>
+    <div class="col"> 
+      <label class="form-label">@ Rated deltaT (MWT - Room)</label>     
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" v-model="rated_dT" disabled>
+        <span class="input-group-text">°K</span>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col">   
+      <label class="form-label">COP Method</label>
+      <div class="input-group mb-3">
+        <select class="form-control" v-model="cop_method" @change="update">
+          <option value="ecodan">5kW EcoDan Datasheet</option>
+          <option value="carnot">Carnot equation [3]</option>
+        </select>
+      </div>
+    </div>
+    <div class="col"> 
+      <label class="form-label">Heat pump COP</label>     
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" :value="heatpump_COP | toFixed(2)" disabled>
+      </div>
+    </div>
+  </div>
+  <hr>
+  <div class="row">
+    <div class="col"> 
+    <p><b>Comparison with open-circuit system without a heat exchanger:</b></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col"> 
+      <label class="form-label">Heat pump COP if driving radiators directly without the heat exchanger (Flow: {{ app.Tco | toFixed(1) }}°C, Return: {{ app.Tci | toFixed(1) }}°C):</label>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" :value="heatpump_COP_compare | toFixed(2)" disabled>
+      </div>
+    </div>
+    <div class="col">   
+      <label class="form-label"><b>or</b> direct radiator output at the primary flow temperature: {{ app.Thi | toFixed(1) }}°C, return: {{ app.Tho_direct | toFixed(1) }}°C and COP: {{heatpump_COP | toFixed(2)}}</label>
+      <div class="input-group mb-3">
+        <input type="text" class="form-control" :value="radiator_output_compare | toFixed(0)" disabled>
+        <span class="input-group-text">W</span>
+      </div>
+    </div>
+
+  </div>
+  <br>
+  <div class="row">
+    <div class="col">      
+      
+      <p>[1] Effectiveness NTU method, implementation here ported from python <a href="https://github.com/CalebBell/ht/blob/master/ht/hx.py#L899">CalebBell/ht library.</a></p>
+      
+      <p>[2] 15000 W @ 50K = 7x 1200x600mm K2 double panel radiators, each with an output of 2145W @ 50K.</p>
+      
+      <p>[3] Carnot COP equation based on +4K offset on flow temperature, -6K offset on outside temperature and a practical efficiency factor of 50%.</p>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
+
+<script>
+var app = new Vue({
+  el: '#app',
+  data: {
+    htc: 1200,
+    area: 1.0,
+    mh_lmin: 12,
+    mc_lmin: 12,
+    mh: 0.2,
+    mc: 0.2,
+    Cph: 4020,
+    Cpc: 4187,
+    Thi: 20,
+    Tho: 20,
+    Tci: 20,
+    Tco: 20,
+    room: 20,
+    outside: -3,
+    heatpump_output: 4000,
+    rated_output: 15000,
+    rated_dT: 50,
+    radiator_output: 0,
+    heatpump_COP: 0,
+    radiator_output_compare: 0,
+    heatpump_COP_compare: 0,
+    Tho_direct: 20,
+    cop_method: "ecodan"
+  },
+  methods: {
+    update: function () {
+      app.mh = app.mh_lmin / 60;
+      app.mc = app.mc_lmin / 60;
+      
+      var UA = app.htc * app.area
+      var Cmin = calc_Cmin(app.mh, app.mc, app.Cph, app.Cpc)
+      var Cmax = calc_Cmax(app.mh, app.mc, app.Cph, app.Cpc)
+      var Cr = calc_Cr(app.mh, app.mc, app.Cph, app.Cpc)
+      var Cc = app.mc*app.Cpc
+      var Ch = app.mh*app.Cph
+      var NTU = NTU_from_UA(UA, Cmin)
+      var eff = effectiveness_from_NTU(NTU, Cr)
+      
+      // Solve for radiator and heat exchanger combination
+      app.radiator_output = 0
+      for (var i=0; i<100; i++) {
+        app.Thi = app.Tho + app.heatpump_output/(app.Cph*app.mh)
+        
+        let Q = eff*Cmin*(app.Thi - app.Tci)
+
+        app.Tco = app.Tci + Q/(Cc)
+        app.Tho = app.Thi - Q/(Ch)
+        
+        let MWT = (app.Tco+app.Tci)/2
+       
+        let last_heat_output = app.radiator_output
+        app.radiator_output = app.rated_output * Math.pow(((MWT - app.room) / app.rated_dT),1.3)
+
+        app.Tci = app.Tco - (app.radiator_output/(app.Cpc*app.mc))
+        
+        if (Math.round(app.radiator_output*100)==Math.round(last_heat_output*100) && Math.round(Q*100)==Math.round(app.radiator_output*100)){
+          break;
+        }
+      }
+      
+      if (app.cop_method=="ecodan") {
+          app.heatpump_COP = get_ecodan_cop(app.Thi,app.outside,app.radiator_output/5000)
+          app.heatpump_COP_compare = get_ecodan_cop(app.Tco,app.outside,app.radiator_output/5000)
+      } else {
+          app.heatpump_COP = heatpump_COP(app.Thi,app.outside)
+          app.heatpump_COP_compare = heatpump_COP(app.Tco,app.outside)
+      }
+      
+      // Search for heat output from radiators at given flow temperature and flow rate
+      app.Tho_direct = app.Thi
+      var MWT = app.Thi
+      app.radiator_output_compare = 0
+      for (var i=0; i<100; i++) {
+        MWT = (app.Thi + app.Tho_direct)*0.5
+        let last_heat_output = app.radiator_output_compare
+        app.radiator_output_compare = app.rated_output * Math.pow(((MWT - app.room) / app.rated_dT),1.3)
+        dT = app.radiator_output_compare / (app.Cph*app.mh)
+        app.Tho_direct = app.Thi - dT
+        if (Math.round(app.radiator_output_compare*100)==Math.round(last_heat_output*100)) {
+          break;
+        }
+      }
+    }
+  },
+  filters: {
+    toFixed: function(val,dp) {
+      if (isNaN(val)) {
+          return val;
+      } else {
+          return val.toFixed(dp)
+      }
+    }
+  }
+});
+
+app.update();
+
+function calc_Cmin(mh, mc, Cph, Cpc) {
+    Ch = mh*Cph
+    Cc = mc*Cpc
+    return Math.min(Ch, Cc)
+}
+    
+function calc_Cmax(mh, mc, Cph, Cpc) {  
+    Ch = mh*Cph
+    Cc = mc*Cpc
+    return Math.max(Ch, Cc)
+}
+    
+function calc_Cr(mh, mc, Cph, Cpc) {   
+    Ch = mh*Cph
+    Cc = mc*Cpc
+    Cmin = Math.min(Ch, Cc)
+    Cmax = Math.max(Ch, Cc)
+    return Cmin/Cmax
+}
+
+function NTU_from_UA(UA, Cmin) {
+    return UA/Cmin
+}
+     
+function effectiveness_from_NTU(NTU, Cr) {
+    if (Cr < 1) {
+        return (1.0 - Math.exp(-NTU*(1.0 - Cr)))/(1.0 - Cr*Math.exp(-NTU*(1.0 - Cr)))
+    } else if (Cr == 1) {
+        return NTU/(1.0 + NTU)
+    } else {
+        return false
+    }
+}
+
+function heatpump_COP(flowT,outsideT) {
+    T_condensing = flowT + 4
+    T_refrigerant = outsideT - 6
+    Carnot_COP = (T_condensing + 273) / ((T_condensing+273) - (T_refrigerant + 273))
+    Practical_COP = 0.5 * Carnot_COP
+    return Practical_COP
+}
+</script>
