@@ -230,7 +230,8 @@ var app = new Vue({
     radiator_output: 0,
     heatpump_COP: 0,
     radiator_output_compare: 0,
-    heatpump_COP_compare: 0
+    heatpump_COP_compare: 0,
+    cop_method: "ecodan"
   },
   methods: {
     update: function () {
@@ -262,20 +263,18 @@ var app = new Vue({
 
         app.Tci = app.Tco - (app.radiator_output/(app.Cpc*app.mc))
         
-        if (parseInt(app.radiator_output)==parseInt(last_heat_output) && parseInt(Q)==parseInt(app.radiator_output)){
+        if (Math.round(app.radiator_output*100)==Math.round(last_heat_output*100) && Math.round(Q*100)==Math.round(app.radiator_output*100)){
           break;
         }
       }
       
-      app.heatpump_COP = get_ecodan_cop(app.Thi,app.outside,app.radiator_output/5000)
-      // app.heatpump_COP = heatpump_COP(app.Thi,app.outside)
-      
-      var dT = Math.pow(app.radiator_output/app.rated_output,1/1.3) * app.rated_dT
-      var MWT = app.room + dT
-      var T_flow = MWT + app.radiator_output / (2*app.Cph*app.mh)
-
-      app.heatpump_COP_compare = get_ecodan_cop(T_flow,app.outside,app.radiator_output/5000)
-      //app.heatpump_COP_compare = heatpump_COP(T_flow,app.outside)
+      if (app.cop_method=="ecodan") {
+          app.heatpump_COP = get_ecodan_cop(app.Thi,app.outside,app.radiator_output/5000)
+          app.heatpump_COP_compare = get_ecodan_cop(app.Tco,app.outside,app.radiator_output/5000)
+      } else {
+          app.heatpump_COP = heatpump_COP(app.Thi,app.outside)
+          app.heatpump_COP_compare = heatpump_COP(app.Tco,app.outside)
+      }
       
       // Search for heat output from radiators at given flow temperature and flow rate
       var Tho = app.Thi
@@ -287,7 +286,7 @@ var app = new Vue({
         app.radiator_output_compare = app.rated_output * Math.pow(((MWT - app.room) / app.rated_dT),1.3)
         dT = app.radiator_output_compare / (app.Cph*app.mh)
         Tho = app.Thi - dT
-        if (parseInt(app.radiator_output_compare)==parseInt(last_heat_output)) {
+        if (Math.round(app.radiator_output_compare*100)==Math.round(last_heat_output*100)) {
           break;
         }
       }
