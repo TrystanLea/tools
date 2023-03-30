@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Heat pump SCOP calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.selection.min.js"></script>
+
+    <script src="lib/ecodan.js?v=1"></script>
+    <script src="lib/feed.js?v=1"></script>
+
+</head>
+
+<body>
+
+    <div class="container" style="max-width:800px" id="app">
+        <div class="row">
+            <div class="col">
+                <br>
+                <h3>Heat pump SCOP calculator</h3>
+                <p>Calculate heat pump SCOP based on design flow temperature.</p>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Base temperature</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="baseTemp" @change="update">
+                    <span class="input-group-text">°C</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Heat Loss Parameter</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="HLP" @change="update">
+                    <span class="input-group-text">W/K</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Design Flow Temperature</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="designFlowTemp" @change="update">
+                    <span class="input-group-text">°C</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Minimum Flow Temperature</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="minFlowTemp" @change="update">
+                    <span class="input-group-text">°C</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">System DT</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="systemDT" @change="update">
+                    <span class="input-group-text">K</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Annual space heat demand</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="annual_heat_kwh | toFixed(0)" disabled>
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Annual electric demand</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="annual_elec_kwh | toFixed(0)" disabled>
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">SCOP</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="annual_scop | toFixed(2)" disabled>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <!-- A simple flot graph -->
+                <div id="graph" style="width:100%;height:400px;"></div>
+            </div>
+        </div>
+        <hr> 
+        <div class="row">
+            <div class="col">
+                <table class="table">
+                    <tr>
+                        <th>Month</th>
+                        <th>Heat demand</th>
+                        <th>Electric demand</th>
+                        <th>SCOP</th>
+                    </tr>
+                    <tr v-for="month in monthly_table">
+                        <td>{{month.month}}</td>
+                        <td>{{month.heat_kwh | toFixed(0)}} kWh</td>
+                        <td>{{month.elec_kwh | toFixed(0)}} kWh</td>
+                        <td>{{month.scop | toFixed(2)}}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <hr> 
+    </div>
+
+</body>
+
+</html>
+
+<script>
+    // Start by loading hourly average outside temperature data from emoncms.org API
+    // Create basic Vue outline
+    var series = [];
+
+    var app = new Vue({
+        el: '#app',
+        data: {
+            // inputs
+            baseTemp: 15.5,
+            HLP: 175,
+            designFlowTemp: 42,
+            minFlowTemp: 32,
+            systemDT: 5,
+            // outputs
+            annual_heat_kwh: 0,
+            annual_elec_kwh: 0,
+            annual_scop: 0,
+            monthly_table: [],
+            monthly_heat_demand: []
+        },
+        methods: {
+            update: function () {
+                app.model();
+            },
+            model: function() {
+                // reset for new calculation
+                app.annual_elec_kwh = 0;
+                app.annual_heat_kwh = 0;
+                let month_elec_kwh = 0;
+                let month_heat_kwh = 0;
+
+                var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                
+                let month = new Date(series[0].data[0][0]).getMonth();
+                app.monthly_heat_demand = [];
+                app.monthly_table = [];
+                
+                for (var i = 0; i < series[0].data.length; i++) {
+                    let outsideTemp = series[0].data[i][1];
+
+                    // Calculate degree hours heating demand
+                    let degreeHour = app.baseTemp - outsideTemp;
+                    if (degreeHour < 0) {
+                        degreeHour = 0;
+                    }
+
+                    // Calculate heat demand using heat loss parameter
+                    let heatDemand = degreeHour * app.HLP;
+                    // convert to cumulative kWh
+                    app.annual_heat_kwh += heatDemand / 1000;
+                    month_heat_kwh += heatDemand / 1000;
+
+                    // Calculate MWT
+                    let parallel_shift = app.designFlowTemp - 49;
+                    let MWT = 46.4-(1.08*outsideTemp)-(0.00842*outsideTemp^2)+parallel_shift;
+                    if (MWT < app.minFlowTemp) {
+                        MWT = app.minFlowTemp;
+                    }
+
+                    let flowTemp = MWT + (app.systemDT*0.5);
+                    let condensing_offset = 4;
+                    let evaporating_offset = -6;
+                    let practical_COP_factor = 0.5;
+
+                    let Th = flowTemp + 273 + condensing_offset;
+                    let Tc = outsideTemp + 273 + evaporating_offset;
+                    let carnot_COP = Th / (Th - Tc);
+                    let COP = carnot_COP * practical_COP_factor;
+
+                    let elecDemand = heatDemand / COP;
+                    app.annual_elec_kwh += elecDemand / 1000;
+                    month_elec_kwh += elecDemand / 1000;
+
+                    // Create timeseries of monthly heat demand for graph and table
+                    let lastMonth = month;
+                    month = new Date(series[0].data[i][0]).getMonth();
+                    if (month != lastMonth) {
+                        app.monthly_heat_demand.push([lastMonth, month_heat_kwh]);
+
+                        app.monthly_table.push({
+                            month: months[lastMonth],
+                            heat_kwh: month_heat_kwh,
+                            elec_kwh: month_elec_kwh,
+                            scop: month_heat_kwh / month_elec_kwh
+                        });
+                        month_heat_kwh = 0;
+                        month_elec_kwh = 0;
+                    }
+                }
+
+                app.annual_scop = app.annual_heat_kwh / app.annual_elec_kwh;
+
+                $.plot("#graph", [app.monthly_heat_demand], {
+                    // bar graph
+                    series: {
+                        bars: {
+                            show: true,
+                            barWidth: 0.8,
+                            align: "center"
+                        }
+                    },
+                    xaxis: {
+                    },
+                    yaxis: {
+                    },
+                    selection: {
+                        mode: "x"
+                    },
+                    grid:{
+                        hoverable: true,
+                        clickable: true
+                    }
+                });
+            }
+        },
+        filters: {
+            toFixed: function (val, dp) {
+                if (isNaN(val)) {
+                    return val;
+                } else {
+                    return val.toFixed(dp)
+                }
+            }
+        },
+        mounted: function () {
+            feed.getdata(458775,"2022-01-01T00:00:00Z","2023-01-01T00:00:00Z",3600,1,function(result){
+                series = result;
+                app.update();
+            });
+        }
+    });
+
+</script>
