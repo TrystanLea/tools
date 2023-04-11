@@ -20,6 +20,7 @@ var app = new Vue({
             min_modulation: 2000,
             system_water_volume: 60, // Litres
             flow_rate: 12, // Litres per minute
+            system_DT: 5,
             radiatorRatedOutput: 15000,
             radiatorRatedDT: 50
         },
@@ -219,8 +220,12 @@ function sim() {
         // Radiator model
         Delta_T = Math.pow(heatpump_heat / app.heatpump.radiatorRatedOutput, 1 / 1.3) * app.heatpump.radiatorRatedDT;
 
-        system_DT = heatpump_heat / ((app.heatpump.flow_rate / 60) * 4187);
-
+        if (heatpump_heat>0) {
+            system_DT = app.heatpump.system_DT // heatpump_heat / ((app.heatpump.flow_rate / 60) * 4187);
+        } else {
+            system_DT = 0
+        }
+        
         MWT = room + Delta_T;
         flow_temperature = MWT + system_DT * 0.5;
 
@@ -278,11 +283,7 @@ function sim() {
     }
 
     calculate_steady_state();
-
-    // Steady state electric demand 
-
-
-
+    
     // Automatic refinement, disabled for now, running simulation 3 times instead.
     // if (Math.abs(start_t1 - t1) > hs * 1.0) sim();
 }
@@ -297,7 +298,7 @@ function calculate_steady_state(){
     // Steady state flow temperature
     dT = Math.pow(heating_demand / app.heatpump.radiatorRatedOutput, 1 / 1.3) * app.heatpump.radiatorRatedDT;
     let MWT = app.max_room_temp + dT;
-    let system_DT = heating_demand / ((app.heatpump.flow_rate / 60) * 4187);
+    let system_DT = app.heatpump.system_DT // heating_demand / ((app.heatpump.flow_rate / 60) * 4187);
     let flow_temperature = MWT + system_DT * 0.5;
 
     // Steady state COP
@@ -306,6 +307,7 @@ function calculate_steady_state(){
     let IdealCOP = (condensor + 273) / ((condensor + 273) - (evaporator + 273));
     let PracticalCOP = 0.5 * IdealCOP;
 
+    // Steady state electric demand 
     let heatpump_elec_kwh = heating_demand_kwh / PracticalCOP;
 
     app.results.elec_saving_prc = 100* (1-(app.results.elec_kwh / heatpump_elec_kwh))
