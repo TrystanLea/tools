@@ -25,7 +25,7 @@
                 <h3>Dynamic heat pump simulator</h3>
                 <p>Explore continuous vs intermittent heating, temperature set-backs and schedules.</p>
                 <div class="alert alert-warning"><i class="fa-solid fa-person-digging"></i> This tool is work in
-                    progress. It does not yet implement minimum modulation and so will over estimate performance in certain cases.</div>
+                    progress. It does not yet implement minimum modulation or take into account defrosts and so will over estimate performance in certain cases. Help welcome to make this tool better.</div>
             </div>
         </div>
         <div class="row">
@@ -36,19 +36,29 @@
         <br><br>
         <div class="row">
             <div class="col">
-                <label class="form-label">Electric input & saving vs steady state</label>
+                <label class="form-label">Electric input</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="results.elec_kwh | toFixed(3)" disabled>
                     <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col">    
+                <label class="form-label">Saving vs steady state</label>
+                <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="results.elec_saving_prc | toFixed(1)" disabled>
                     <span class="input-group-text">%</span>
                 </div>
             </div>
             <div class="col">
-                <label class="form-label">Heat output & saving vs steady state</label>
+                <label class="form-label">Heat output</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="results.heat_kwh | toFixed(3)" disabled>
                     <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Saving vs steady state</label>
+                <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="results.heat_saving_prc | toFixed(1)" disabled>            
                     <span class="input-group-text">%</span>
                 </div>
@@ -131,6 +141,19 @@
                 <div class="card">
                     <div class="card-body">
 
+                        <label class="form-label">Control mode:</label>
+                        
+                        <select class="form-control" v-model="control.mode" @change="simulate">
+                            <option value=0>Auto adapt 3 term PID controller</option>
+                            <option value=1>Weather compensation with parallel shift</option>
+                        </select>
+
+                    </div>
+                </div>
+                <br>          
+                <div class="card" v-if="control.mode==0">
+                    <div class="card-body">
+
                         <label class="form-label">Auto adapt 3 term PID controller:</label>
 
                         <div class="row">
@@ -162,6 +185,19 @@
 
                     </div>
                 </div>
+                <div class="card" v-if="control.mode==1">
+                    <div class="card-body">
+                    
+                        <label class="form-label">Weather compensation outside temperature response:</label>
+                        
+                        <select class="form-control" v-model.number="control.wc_use_outside_mean" @change="simulate">
+                            <option value=0>Instantaneous</option>
+                            <option value=1>Average temperature for the day</option>
+                        </select>
+                        <br>
+                        <p><i>Curve automatically selected based on building heat loss, internal gains and heat emitter spec.</i></p>
+                    </div>
+                </div>       
                 <br>
 
                 <div class="card">
@@ -228,6 +264,16 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="row">
+                            <div class="col">
+                                <label class="form-label">Minimum</label>
+                                <input type="text" class="form-control" v-model="external.min_time" @change="simulate" />
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Maximum</label>
+                                <input type="text" class="form-control" v-model="external.max_time" @change="simulate" />
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <br>
@@ -253,4 +299,4 @@
         </div>
     </div>
 </body>
-<script src="dynamic_heatpump_v1.js?v=2"></script>
+<script src="dynamic_heatpump_v1.js?v=6"></script>

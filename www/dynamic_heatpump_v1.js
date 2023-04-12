@@ -1,4 +1,7 @@
 
+var AUTO_ADAPT = 0;
+var WEATHER_COMP_CURVE = 1;
+
 var app = new Vue({
     el: '#app',
     data: {
@@ -13,7 +16,9 @@ var app = new Vue({
         },
         external: {
             mid: 6,
-            swing: 0
+            swing: 4,
+            min_time: "06:00",
+            max_time: "14:00"
         },
         heatpump: {
             capacity: 5000,
@@ -25,15 +30,18 @@ var app = new Vue({
             radiatorRatedDT: 50
         },
         control: {
+            mode: AUTO_ADAPT,
+            wc_use_outside_mean: 1,
+            
             Kp: 10000,
             Ki: 0.1,
             Kd: 0.0
         },
         schedule: [
-            { start: "00:00", set_point: 17, flowT: 42 },
-            { start: "07:00", set_point: 18, flowT: 42 },
-            { start: "16:00", set_point: 19, flowT: 42 },
-            { start: "22:00", set_point: 17, flowT: 42 }
+            { start: "00:00", set_point: 17, flowT: 42, parallel_shift: 0 },
+            { start: "07:00", set_point: 18, flowT: 42, parallel_shift: 0 },
+            { start: "16:00", set_point: 19, flowT: 42, parallel_shift: 0 },
+            { start: "22:00", set_point: 17, flowT: 42, parallel_shift: 0 }
 
         ],
         results: {
@@ -158,12 +166,37 @@ function sim() {
     var power_to_kwh = timestep / 3600000;
 
     app.max_room_temp = 0;
-
+    
+    heatpump_state = 0;
+    
+    time_off = -600;
+    
+    // Used for outside temperature waveform generation
+    var outside_min_time = time_str_to_hour(app.external.min_time);
+    app.external.min_time = hour_to_time_str(outside_min_time)
+    var outside_max_time = time_str_to_hour(app.external.max_time);
+    app.external.max_time = hour_to_time_str(outside_max_time)
+    var ramp_up = outside_max_time - outside_min_time;
+    var ramp_down = 24 - ramp_up;
+    
+    
     for (var i = 0; i < itterations; i++) {
-        let time = i * timestep * 1000;
-        let hour = time / 3600000;
+        let time = i * timestep;
+        let hour = time / 3600;
+        
+        // Outside temperature model
+        if (hour>=outside_min_time && hour<outside_max_time) {
+            A = (hour-outside_min_time-(6*ramp_up/12)) / (ramp_up*2)
+        } else {
+            let hour_mod = hour;
+            if (hour<outside_min_time) hour_mod = 24 + hour;
+            A = (hour_mod-outside_max_time+(6*ramp_down/12)) / (ramp_down*2)
+        }
+        radians = 2 * Math.PI * A
+        outside = app.external.mid + Math.sin(radians) * app.external.swing * 0.5;   
+    
 
-        var outside = app.external.mid - Math.cos(2 * Math.PI * (i / itterations)) * app.external.swing * 0.5;
+        last_setpoint = setpoint;
 
         // Load heating schedule
         for (let j = 0; j < app.schedule.length; j++) {
@@ -173,24 +206,44 @@ function sim() {
                 max_flowT = parseFloat(app.schedule[j].flowT);
             }
         }
+        
+        if (app.control.mode==AUTO_ADAPT) {
+            // 3 term control algorithm
+            // Kp = 1400 // Find unstable oscillation point and divide in half.. 
+            // Ki = 0.2
+            // Kd = 0
+        
+            last_error = error
+            error = setpoint - room
 
-        // 3 term control algorithm
-        // Kp = 1400 // Find unstable oscillation point and divide in half.. 
-        // Ki = 0.2
-        // Kd = 0
+            // Option: explore control based on flow temp target
+            // error = max_flowT - flow_temperature
+            delta_error = error - last_error
 
-        last_error = error
-        error = setpoint - room
+            PTerm = app.control.Kp * error
+            ITerm += error * timestep
+            DTerm = delta_error / timestep
 
-        // Option: explore control based on flow temp target
-        // error = max_flowT - flow_temperature
-        delta_error = error - last_error
-
-        PTerm = app.control.Kp * error
-        ITerm += error * timestep
-        DTerm = delta_error / timestep
-
-        heatpump_heat = PTerm + (app.control.Ki * ITerm) + (app.control.Kd * DTerm)
+            heatpump_heat = PTerm + (app.control.Ki * ITerm) + (app.control.Kd * DTerm)
+            
+        } else if (app.control.mode==WEATHER_COMP_CURVE) {
+            
+            // Rather than describe a heating curve based on table data with the requirement to work out which curve you should be on
+            // this approach makes use of the fact that we know the building parameters exactly. We can then use these to generate
+            // a flow temperature to outside temperature relationship that is finely tuned to the physics of the building.
+            
+            if (app.control.wc_use_outside_mean) {
+                room_outside_DT = setpoint - app.external.mid
+            } else {
+                room_outside_DT = setpoint - outside 
+            }
+            heat_requirement = room_outside_DT * app.building.fabric_WK
+            heatpump_heat = heat_requirement - app.building.internal_gains
+            rad_room_DT = Math.pow(heatpump_heat / app.heatpump.radiatorRatedOutput, 1 / 1.3) * app.heatpump.radiatorRatedDT
+            MWT = setpoint + rad_room_DT
+            flow_temperature = MWT + (app.heatpump.system_DT*0.5)
+        
+        }
 
         // Apply limits
         if (heatpump_heat > app.heatpump.capacity) {
@@ -199,6 +252,38 @@ function sim() {
         if (heatpump_heat < 0) {
             heatpump_heat = 0;
         }
+        
+        // Minimum modulation cycling control
+        // Feel free to help improved this:
+        /*
+        // turn heatpump back on if heat demand is high enough 
+        // and we have been off for more than set time
+        if (heatpump_state==0 && heatpump_heat>=2000 && (time-time_off)>600) {
+            heatpump_state = 1;
+        }
+            
+        // If we are below minimum modulation turn heat pump off for x minutes
+        if (heatpump_heat<2000 && heatpump_state==1) {
+            time_off = time;
+            heatpump_state = 0;
+            // if we are below minimum modulation 
+            // we are also near the setpoint 
+            // Kp responsiveness can be reduced
+            // so that Pterm does not grow excessively during off time
+            // there is probable a better way of doing this
+            app.control.Kp = 2000;
+        }
+        
+        // Set heat pump heat to zero if state is off
+        if (heatpump_state==0) {
+             heatpump_heat = 0;
+        }
+        
+        // Reset Kp if set point changes
+        if (setpoint!=last_setpoint) {
+            app.control.Kp = 10000;
+        }*/
+        
 
         /*
         // Implementation includes system volume
@@ -263,7 +348,7 @@ function sim() {
         h3 = (app.building.internal_gains + radiator_heat) - (u3 * (room - t2));
         h2 = u3 * (room - t2) - u2 * (t2 - t1);
         h1 = u2 * (t2 - t1) - u1 * (t1 - outside);
-
+        
         // 2. Calculate change in temperature
         room += (h3 * timestep) / k3;
         t2 += (h2 * timestep) / k2;
@@ -274,12 +359,13 @@ function sim() {
         }
 
         // Populate time series data arrays for plotting
-        roomT_data.push([time, room]);
-        outsideT_data.push([time, outside]);
-        flowT_data.push([time, flow_temperature]);
-        returnT_data.push([time, return_temperature]);
-        elec_data.push([time, heatpump_elec]);
-        heat_data.push([time, heatpump_heat]);
+        let timems = time*1000;
+        roomT_data.push([timems, room]);
+        outsideT_data.push([timems, outside]);
+        flowT_data.push([timems, flow_temperature]);
+        returnT_data.push([timems, return_temperature]);
+        elec_data.push([timems, heatpump_elec]);
+        heat_data.push([timems, heatpump_heat]);
     }
 
     calculate_steady_state();
