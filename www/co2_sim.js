@@ -17,6 +17,7 @@ var app = new Vue({
             min: 0,
             max: 0
         },
+        selection_air_change_rate: '?',
         refinements: 3
     },
     methods: {
@@ -82,6 +83,8 @@ var room_volume_litres = app.building.volume * 1000;
 var co2_ppm = 5000;
 var co2_litres = room_volume_litres * (co2_ppm / 1000000);
 
+var timestep = 30;
+
 app.refinements = 5;
 app.simulate();
 app.refinements = 3;
@@ -89,7 +92,7 @@ app.refinements = 3;
 function sim() {
     co2_data = [];
 
-    var timestep = 30;
+    
     var itterations = 3600 * 24 / timestep;
 
     var co2_production = 0;
@@ -147,7 +150,7 @@ function plot() {
         grid: { show: true, hoverable: true },
         xaxis: { mode: 'time' },
         yaxes: [{}],
-        selection: { mode: "xy" }
+        selection: { mode: "x" }
     };
 
     var plot = $.plot($('#graph'), series, options);
@@ -175,6 +178,27 @@ $('#graph').bind("plothover", function (event, pos, item) {
 
         }
     } else $("#tooltip").remove();
+});
+
+// plot selection
+$("#graph").bind("plotselected", function (event, ranges) {
+
+    var start = Math.round(ranges.xaxis.from*0.001/timestep)*timestep;
+    var end = Math.round(ranges.xaxis.to*0.001/timestep)*timestep;
+
+    // get values at start and end of selection
+    var startVal = null;
+    var endVal = null;
+    for (var i = 0; i < co2_data.length; i++) {
+        if (co2_data[i][0]*0.001 == start) startVal = co2_data[i][1];
+        if (co2_data[i][0]*0.001 == end) endVal = co2_data[i][1];
+    }
+
+    var time_change = end - start;
+    var co2_start_minus_ambient = startVal - app.ambient_co2;
+    var co2_end_minus_ambient = endVal - app.ambient_co2;
+
+    app.selection_air_change_rate = ((-1*Math.log(co2_end_minus_ambient / co2_start_minus_ambient))/time_change)*3600;    
 });
 
 function tooltip(x, y, contents, bgColour, borderColour = "rgb(255, 221, 221)") {
