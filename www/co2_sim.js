@@ -2,6 +2,7 @@ var app = new Vue({
     el: '#app',
     data: {
         ambient_co2: 420,
+        exp_baseline_co2: 420,
         building: {
             volume: 75,
             air_change_rate: 0.35
@@ -33,6 +34,9 @@ var app = new Vue({
             co2_litres = room_volume_litres * (co2_ppm / 1000000);
 
             this.simulate();
+        },
+        update_exp_fit: function () {
+            plot_exp_fit();
         },
         add_space: function () {
             if (this.schedule.length > 0) {
@@ -85,12 +89,20 @@ var co2_litres = room_volume_litres * (co2_ppm / 1000000);
 
 var timestep = 30;
 
+var selection = {
+    start_time: null,
+    end_time: null,
+    start_val: null,
+    end_val: null
+}
+
 app.refinements = 5;
 app.simulate();
 app.refinements = 3;
 
 function sim() {
     co2_data = [];
+    exp_decay_data = [];
 
     
     var itterations = 3600 * 24 / timestep;
@@ -143,7 +155,8 @@ function sim() {
 
 function plot() {
     var series = [
-        { label: "CO2", data: co2_data, color: 0, yaxis: 1, lines: { show: true, fill: false } }
+        { label: "CO2", data: co2_data, color: 0, yaxis: 1, lines: { show: true, fill: false } },
+        { label: "Exp fit", data: exp_decay_data, color: "#000", yaxis: 1, lines: { show: true, fill: false } }
     ];
 
     var options = {
@@ -183,32 +196,46 @@ $('#graph').bind("plothover", function (event, pos, item) {
 // plot selection
 $("#graph").bind("plotselected", function (event, ranges) {
 
-    var start = Math.round(ranges.xaxis.from*0.001/timestep)*timestep;
-    var end = Math.round(ranges.xaxis.to*0.001/timestep)*timestep;
+    selection.start_time = Math.round(ranges.xaxis.from*0.001/timestep)*timestep;
+    selection.end_time = Math.round(ranges.xaxis.to*0.001/timestep)*timestep;
 
     // get values at start and end of selection
-    var startVal = null;
-    var endVal = null;
+    selection.start_val = null;
+    selection.end_val = null;
     for (var i = 0; i < co2_data.length; i++) {
-        if (co2_data[i][0]*0.001 == start) startVal = co2_data[i][1];
-        if (co2_data[i][0]*0.001 == end) endVal = co2_data[i][1];
+        if (co2_data[i][0]*0.001 == selection.start_time) selection.start_val = co2_data[i][1];
+        if (co2_data[i][0]*0.001 == selection.end_time) selection.end_val = co2_data[i][1];
     }
 
-    if (startVal == null || endVal == null) {
+    if (selection.start_val == null || selection.end_val == null) {
         alert("Error: could not find data points for selected range");
         return;
     }
 
-    if (endVal < startVal) {
-        var time_change = end - start;
-        var co2_start_minus_ambient = startVal - app.ambient_co2;
-        var co2_end_minus_ambient = endVal - app.ambient_co2;
+    if (selection.end_val < selection.start_val) {
+        
+        plot_exp_fit();
 
-        app.selection_air_change_rate = ((-1*Math.log(co2_end_minus_ambient / co2_start_minus_ambient))/time_change)*3600;   
     } else {
         app.selection_air_change_rate = "?";
     }
 });
+
+function plot_exp_fit() {
+
+    var time_change = selection.end_time - selection.start_time;
+    var co2_start_minus_ambient = selection.start_val - app.exp_baseline_co2;
+    var co2_end_minus_ambient = selection.end_val - app.exp_baseline_co2;
+
+    app.selection_air_change_rate = ((-1*Math.log(co2_end_minus_ambient / co2_start_minus_ambient))/time_change)*3600;  
+
+    exp_decay_data = [];
+    for (var time = selection.start_time; time <= selection.end_time; time += timestep) {
+        var co2 = (selection.start_val - app.exp_baseline_co2)*Math.exp(-1*(app.selection_air_change_rate/3600)*(time-selection.start_time))+app.exp_baseline_co2;
+        exp_decay_data.push([time*1000,co2]);
+    }
+    plot();
+}
 
 function tooltip(x, y, contents, bgColour, borderColour = "rgb(255, 221, 221)") {
     var offset = 10;

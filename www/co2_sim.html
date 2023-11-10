@@ -132,6 +132,11 @@
                             <input type="text" class="form-control" v-model.number="ambient_co2" @change="simulate" />
                             <span class="input-group-text">ppm</span>
                         </div>
+                        <p>Exponential fit baseline</p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" v-model.number="exp_baseline_co2" @change="update_exp_fit" />
+                            <span class="input-group-text">ppm</span>
+                        </div>
                     </div>
                 </div>
 
@@ -139,4 +144,4 @@
         </div>
     </div>
 </body>
-<script src="co2_sim.js?v=4"></script>
+<script src="co2_sim.js?v=5"></script>
