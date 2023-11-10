@@ -194,11 +194,20 @@ $("#graph").bind("plotselected", function (event, ranges) {
         if (co2_data[i][0]*0.001 == end) endVal = co2_data[i][1];
     }
 
-    var time_change = end - start;
-    var co2_start_minus_ambient = startVal - app.ambient_co2;
-    var co2_end_minus_ambient = endVal - app.ambient_co2;
+    if (startVal == null || endVal == null) {
+        alert("Error: could not find data points for selected range");
+        return;
+    }
 
-    app.selection_air_change_rate = ((-1*Math.log(co2_end_minus_ambient / co2_start_minus_ambient))/time_change)*3600;    
+    if (endVal < startVal) {
+        var time_change = end - start;
+        var co2_start_minus_ambient = startVal - app.ambient_co2;
+        var co2_end_minus_ambient = endVal - app.ambient_co2;
+
+        app.selection_air_change_rate = ((-1*Math.log(co2_end_minus_ambient / co2_start_minus_ambient))/time_change)*3600;   
+    } else {
+        app.selection_air_change_rate = "?";
+    }
 });
 
 function tooltip(x, y, contents, bgColour, borderColour = "rgb(255, 221, 221)") {
