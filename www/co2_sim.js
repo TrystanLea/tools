@@ -4,13 +4,12 @@ var app = new Vue({
         ambient_co2: 420,
         exp_baseline_co2: 420,
         building: {
-            volume: 75,
-            air_change_rate: 0.35
+            volume: 75
         },
         schedule: [
-            { start: "00:00", co2_production: 0 },
-            { start: "10:00", co2_production: 36 },
-            { start: "18:00", co2_production: 0 }
+            { start: "00:00", co2_production: 0, air_change_rate: 0.35 },
+            { start: "10:00", co2_production: 36, air_change_rate: 0.35 },
+            { start: "18:00", co2_production: 0, air_change_rate: 0.35 }
 
         ],
         results: {
@@ -19,6 +18,8 @@ var app = new Vue({
             max: 0
         },
         selection_air_change_rate: '?',
+        total_production: 0,
+        average_air_change_rate: 0,
         refinements: 3
     },
     methods: {
@@ -104,12 +105,12 @@ function sim() {
     co2_data = [];
     exp_decay_data = [];
 
-    
     var itterations = 3600 * 24 / timestep;
 
     var co2_production = 0;
+    app.total_production = 0;
 
-    var litres_ambient_air_per_second = room_volume_litres * (app.building.air_change_rate / 3600);
+    var litres_ambient_air_per_second = 0;
 
     var sum = 0;
     var min = null;
@@ -124,11 +125,13 @@ function sim() {
             let start = time_str_to_hour(app.schedule[j].start);
             if (hour >= start) {
                 co2_production = parseFloat(app.schedule[j].co2_production);
+                litres_ambient_air_per_second = room_volume_litres * (parseFloat(app.schedule[j].air_change_rate) / 3600);
             }
         }
 
         let co2_addition = (co2_production / 3600) * timestep;
         co2_litres += co2_addition;
+        app.total_production += co2_addition;
 
         // Calculate CO2 lost
         let co2_ambient_in = litres_ambient_air_per_second * timestep *  (app.ambient_co2 / 1000000);
@@ -151,6 +154,8 @@ function sim() {
     app.results.mean = sum / itterations;
     app.results.min = min;
     app.results.max = max;
+
+    app.average_air_change_rate = (app.total_production / 24) / (app.building.volume * 1000 * (0.000001 * (app.results.mean - app.ambient_co2)));
 }
 
 function plot() {

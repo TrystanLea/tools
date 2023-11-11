@@ -57,7 +57,7 @@
                 </div>
             </div>
             <div class="col">
-                <label class="form-label">Apparent selection ACH</label>
+                <label class="form-label">Selection ACH</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="selection_air_change_rate | toFixed(2)" disabled>
                     <span class="input-group-text">ACH</span>
@@ -81,6 +81,7 @@
                             <tr>
                                 <th>Time</th>
                                 <th>CO2 Production Rate</th>
+                                <th>Air change rate</th>
                                 <th><button class="btn" @click="add_space"><i class="fas fa-plus"></i></button></th>
                             </tr>
                             <tr v-for="(item,index) in schedule">
@@ -93,10 +94,20 @@
                                         <span class="input-group-text">L/h</span>
                                     </div>
                                 </td>
+                                <td>
+                                    <div class="input-group mb-3">
+                                        <input type="text" class="form-control" v-model.number="item.air_change_rate"
+                                            @change="simulate" style="width:30px" />
+                                        <span class="input-group-text">ACH</span>
+                                    </div>
+                                </td>
                                 <td><button class="btn" @click="delete_space(index)"><i
                                             class="fas fa-trash"></i></button></td>
                             </tr>
                         </table>
+
+                        <p>Total Production {{ total_production | toFixed(1) }} L/day</p>
+                        <p>Average air change rate: {{ average_air_change_rate | toFixed(2) }} ACH</p>
                     </div>
                 </div>
                 <br>
@@ -104,35 +115,18 @@
             <div class="col">
                 <div class="card">
                     <div class="card-body">
-
-                        <div class="row">
-                            <div class="col">
-                                <label class="form-label">Air change rate</label>
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="building.air_change_rate" @change="simulate" />
-                                    <span class="input-group-text">ACH</span>
-                                </div>
-                            </div>
-                            <div class="col">
-                                <label class="form-label">Building volume</label>
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="building.volume" @change="volume_change" />
-                                    <span class="input-group-text">m3</span>
-                                </div>
-                            </div>
+                        <p><b>Building volume</b></p>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control" v-model.number="building.volume" @change="volume_change" />
+                            <span class="input-group-text">m3</span>
                         </div>
-                    </div>
-                </div>
-                <br>
-                <div class="card">
-                    <div class="card-body">
                         <p><b>Ambient CO2 level</b></p>
                         <p>Typical ambient CO2 levels in 2023 are 420 ppm</p>
                         <div class="input-group mb-3">
                             <input type="text" class="form-control" v-model.number="ambient_co2" @change="simulate" />
                             <span class="input-group-text">ppm</span>
                         </div>
-                        <p>Exponential fit baseline</p>
+                        <p><b>Exponential fit baseline</b></p>
                         <div class="input-group mb-3">
                             <input type="text" class="form-control" v-model.number="exp_baseline_co2" @change="update_exp_fit" />
                             <span class="input-group-text">ppm</span>
@@ -144,4 +138,4 @@
         </div>
     </div>
 </body>
-<script src="co2_sim.js?v=5"></script>
+<script src="co2_sim.js?v=7"></script>
