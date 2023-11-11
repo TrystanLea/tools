@@ -57,6 +57,13 @@
                 </div>
             </div>
             <div class="col">
+                <label class="form-label">Mean ACH</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="average_air_change_rate | toFixed(2)" disabled>
+                    <span class="input-group-text">ACH</span>
+                </div>
+            </div>
+            <div class="col">
                 <label class="form-label">Selection ACH</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="selection_air_change_rate | toFixed(2)" disabled>
@@ -73,7 +80,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col">
+            <div class="col-8">
                 <div class="card">
                     <div class="card-body">
                         <h4>Schedule</h4>
@@ -82,23 +89,27 @@
                                 <th>Time</th>
                                 <th>CO2 Production Rate</th>
                                 <th>Air change rate</th>
+                                <th>Heat loss</th>
                                 <th><button class="btn" @click="add_space"><i class="fas fa-plus"></i></button></th>
                             </tr>
                             <tr v-for="(item,index) in schedule">
-                                <td><input type="text" class="form-control" v-model="item.start" @change="simulate"
-                                        style="width:75px" /></td>
+                                <td><input type="text" class="form-control" v-model="item.start" @change="simulate" style="width:75px" /></td>
                                 <td>
-                                    <div class="input-group mb-3">
-                                        <input type="text" class="form-control" v-model.number="item.co2_production"
-                                            @change="simulate" style="width:30px" />
+                                    <div class="input-group mb-3" style="width:120px">
+                                        <input type="text" class="form-control" v-model.number="item.co2_production" @change="simulate" />
                                         <span class="input-group-text">L/h</span>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="input-group mb-3">
-                                        <input type="text" class="form-control" v-model.number="item.air_change_rate"
-                                            @change="simulate" style="width:30px" />
+                                    <div class="input-group mb-3" style="width:120px">
+                                        <input type="text" class="form-control" v-model.number="item.air_change_rate" @change="simulate" />
                                         <span class="input-group-text">ACH</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group mb-3" style="width:120px">
+                                        <input type="text" class="form-control" v-model.number="item.heatloss" disabled />
+                                        <span class="input-group-text">W</span>
                                     </div>
                                 </td>
                                 <td><button class="btn" @click="delete_space(index)"><i
@@ -106,8 +117,9 @@
                             </tr>
                         </table>
 
-                        <p>Total Production {{ total_production | toFixed(1) }} L/day</p>
-                        <p>Average air change rate: {{ average_air_change_rate | toFixed(2) }} ACH</p>
+                        <p>Total C02 Production {{ total_production | toFixed(1) }} L/day</p>
+                        <p>Average heat loss: {{ heatloss_kwh / 0.024 | toFixed(0) }} W, {{ heatloss_kwh | toFixed(1) }} kWh/d</p>
+                        <p><i>MEV & MVHR options not yet added.</i></p>
                     </div>
                 </div>
                 <br>
@@ -121,7 +133,6 @@
                             <span class="input-group-text">m3</span>
                         </div>
                         <p><b>Ambient CO2 level</b></p>
-                        <p>Typical ambient CO2 levels in 2023 are 420 ppm</p>
                         <div class="input-group mb-3">
                             <input type="text" class="form-control" v-model.number="ambient_co2" @change="simulate" />
                             <span class="input-group-text">ppm</span>
@@ -131,6 +142,24 @@
                             <input type="text" class="form-control" v-model.number="exp_baseline_co2" @change="update_exp_fit" />
                             <span class="input-group-text">ppm</span>
                         </div>
+                        <hr>
+                        <p><i>For heat loss calculation only</i></p>
+                        <div class="row">
+                            <div class="col">
+                                <p><b>Internal temperature</b></p>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="internal_temp" @change="simulate" />
+                                    <span class="input-group-text">°C</span>     
+                                </div>
+                            </div>
+                            <div class="col">
+                                <p><b>Outside temperature</b></p>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="outside_temp" @change="simulate" />
+                                    <span class="input-group-text">°C</span>     
+                                </div>
+                            </div>
+                        </div>         
                     </div>
                 </div>
 
@@ -138,4 +167,4 @@
         </div>
     </div>
 </body>
-<script src="co2_sim.js?v=7"></script>
+<script src="co2_sim.js?v=11"></script>

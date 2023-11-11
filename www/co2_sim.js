@@ -3,15 +3,29 @@ var app = new Vue({
     data: {
         ambient_co2: 420,
         exp_baseline_co2: 420,
+        internal_temp: 20,
+        outside_temp: -3,
         building: {
-            volume: 75
+            volume: 75 // 183
         },
         schedule: [
-            { start: "00:00", co2_production: 0, air_change_rate: 0.35 },
-            { start: "10:00", co2_production: 36, air_change_rate: 0.35 },
-            { start: "18:00", co2_production: 0, air_change_rate: 0.35 }
+            { start: "00:00", co2_production: 0, air_change_rate: 0.35, heatloss: 0 },
+            { start: "10:00", co2_production: 36, air_change_rate: 0.35, heatloss: 0 },
+            { start: "18:00", co2_production: 0, air_change_rate: 0.35, heatloss: 0 }
 
         ],
+        /*
+        schedule: [
+            { start: "00:00", co2_production: 30, air_change_rate: 0.4, heatloss: 0 },
+            { start: "07:30", co2_production: 50, air_change_rate: 0.4, heatloss: 0 },
+            { start: "08:30", co2_production: 0, air_change_rate: 0.4, heatloss: 0 },
+            { start: "12:00", co2_production: 36, air_change_rate: 0.4, heatloss: 0 },
+            { start: "13:00", co2_production: 0, air_change_rate: 0.4, heatloss: 0 },
+            { start: "17:00", co2_production: 40, air_change_rate: 0.4, heatloss: 0 },
+            { start: "18:00", co2_production: 50, air_change_rate: 0.4, heatloss: 0 },
+            { start: "22:00", co2_production: 30, air_change_rate: 0.4, heatloss: 0 }
+        ],
+        */
         results: {
             mean: 0,
             min: 0,
@@ -20,6 +34,7 @@ var app = new Vue({
         selection_air_change_rate: '?',
         total_production: 0,
         average_air_change_rate: 0,
+        heatloss_kwh: 0,
         refinements: 3
     },
     methods: {
@@ -115,6 +130,9 @@ function sim() {
     var sum = 0;
     var min = null;
     var max = null;
+
+    var heatloss_W = 0;
+    var heatloss_kwh = 0;
     
     for (var i = 0; i < itterations; i++) {
         let time = i * timestep;
@@ -126,8 +144,17 @@ function sim() {
             if (hour >= start) {
                 co2_production = parseFloat(app.schedule[j].co2_production);
                 litres_ambient_air_per_second = room_volume_litres * (parseFloat(app.schedule[j].air_change_rate) / 3600);
+
+                // Heat loss 
+                // heat loss W = 1.204 kg/m3 * 1005 J/kg/K * app.building.volume * (air_change_rate / 3600)
+                let air_change_factor = (1.204 * 1005) / 3600;
+                heatloss_W = air_change_factor * app.building.volume * parseFloat(app.schedule[j].air_change_rate) * (app.internal_temp - app.outside_temp);
+                app.schedule[j].heatloss = Math.round(heatloss_W);
+
             }
         }
+
+        heatloss_kwh += heatloss_W * (timestep / 3600000);
 
         let co2_addition = (co2_production / 3600) * timestep;
         co2_litres += co2_addition;
@@ -156,6 +183,7 @@ function sim() {
     app.results.max = max;
 
     app.average_air_change_rate = (app.total_production / 24) / (app.building.volume * 1000 * (0.000001 * (app.results.mean - app.ambient_co2)));
+    app.heatloss_kwh = heatloss_kwh;
 }
 
 function plot() {
