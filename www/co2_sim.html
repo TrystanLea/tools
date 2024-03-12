@@ -20,7 +20,7 @@
 </head>
 
 <body>
-    <div class="container" style="max-width:1200px" id="app">
+    <div class="container" style="max-width:1400px" id="app">
         <div class="row">
             <div class="col">
                 <br>
@@ -79,24 +79,101 @@
                 </span>
             </div>
         </div>
+        
         <div class="row">
-            <div class="col-8">
+            <div class="col">
+                <p><b>Building volume</b></p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="building.volume" @change="volume_change" />
+                    <span class="input-group-text">m3</span>
+                </div>
+            </div>
+            <div class="col">
+                <p><b>Ambient CO2 level</b></p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="ambient_co2" @change="simulate" />
+                    <span class="input-group-text">ppm</span>
+                </div>
+            </div>
+            <div class="col">
+                <p><b>Exponential fit baseline</b></p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="exp_baseline_co2" @change="update_exp_fit" />
+                    <span class="input-group-text">ppm</span>
+                </div>
+            </div>
+            <div class="col">
+                <p><b>Internal temperature</b></p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="internal_temp" @change="simulate" />
+                    <span class="input-group-text">°C</span>     
+                </div>
+            </div>
+            <div class="col">
+                <p><b>Outside temperature</b></p>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="outside_temp" @change="simulate" />
+                    <span class="input-group-text">°C</span>     
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
                 <div class="card">
                     <div class="card-body">
                         <h4>Schedule</h4>
                         <table class="table">
                             <tr>
+                                <td></td>
+                                <th v-for="(p,index) in people">Person {{ index+1 }}</th>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            <tr>
+                                <td>Gender</td>
+                                <th v-for="(p,index) in people">
+                                    <select class="form-control" v-model="p.gender" @change="simulate" style="width:140px">
+                                        <option value="male">Male</option>
+                                        <option value="female">Female</option>
+                                    </select>
+                                </th>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+                            
+                            <tr>
+                                <td>Age</td>
+                                <th v-for="(p,index) in people">
+                                    <input type="text" class="form-control" v-model.number="p.age" @change="simulate" style="width:140px" />
+                                </th>
+                                <td></td>
+                                <td></td>
+                                <td></td>
+                            </tr>
+
+                            <tr>
                                 <th>Time</th>
+                                <th v-for="(p,index) in people">Person {{ index+1 }}</th>
                                 <th>CO2 Production Rate</th>
                                 <th>Air change rate</th>
                                 <th>Heat loss</th>
                                 <th><button class="btn" @click="add_space"><i class="fas fa-plus"></i></button></th>
                             </tr>
+
                             <tr v-for="(item,index) in schedule">
                                 <td><input type="text" class="form-control" v-model="item.start" @change="simulate" style="width:75px" /></td>
+                                <td v-for="(p,person_index) in people">
+                                    <select type="text" class="form-control" v-model="item.person_activities[person_index]" @change="simulate" style="width:140px">
+                                        <option v-for="(activity,activity_key) in activity_met">{{ activity_key }}</option>
+                                    </select>
+
+                                </td>
                                 <td>
                                     <div class="input-group mb-3" style="width:120px">
-                                        <input type="text" class="form-control" v-model.number="item.co2_production" @change="simulate" />
+                                        <input type="text" class="form-control" :value="item.co2_production | toFixed(1)"  disabled/>
                                         <span class="input-group-text">L/h</span>
                                     </div>
                                 </td>
@@ -124,48 +201,9 @@
                 </div>
                 <br>
             </div>
-            <div class="col">
-                <div class="card">
-                    <div class="card-body">
-                        <p><b>Building volume</b></p>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control" v-model.number="building.volume" @change="volume_change" />
-                            <span class="input-group-text">m3</span>
-                        </div>
-                        <p><b>Ambient CO2 level</b></p>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control" v-model.number="ambient_co2" @change="simulate" />
-                            <span class="input-group-text">ppm</span>
-                        </div>
-                        <p><b>Exponential fit baseline</b></p>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control" v-model.number="exp_baseline_co2" @change="update_exp_fit" />
-                            <span class="input-group-text">ppm</span>
-                        </div>
-                        <hr>
-                        <p><i>For heat loss calculation only</i></p>
-                        <div class="row">
-                            <div class="col">
-                                <p><b>Internal temperature</b></p>
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="internal_temp" @change="simulate" />
-                                    <span class="input-group-text">°C</span>     
-                                </div>
-                            </div>
-                            <div class="col">
-                                <p><b>Outside temperature</b></p>
-                                <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="outside_temp" @change="simulate" />
-                                    <span class="input-group-text">°C</span>     
-                                </div>
-                            </div>
-                        </div>         
-                    </div>
-                </div>
-
-            </div>
+            
         </div>
     </div>
 </body>
-<script src="calculate_co2_rate.js?v=1"></script>
-<script src="co2_sim.js?v=11"></script>
+<script src="calculate_co2_rate.js?v=4"></script>
+<script src="co2_sim.js?v=13"></script>

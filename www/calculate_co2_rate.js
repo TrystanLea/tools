@@ -9,16 +9,17 @@
 // Exercise / Dancing reduce to 4.0 to match table should be 5-7.5
 
 var activity_met = {
+    "Away": 0.0,
     "Sleeping": 0.95,
-    "Sitting quietly": 1.2,
-    "Sitting reading, writing, typing": 1.3,
-    "Office work, light effort": 1.5,
-    "Light cleaning": 2.3,
-    "Child care": 2.5,
-    "Standing tasks, light effort": 3.0,
-    "Kitchen activity": 3.3,
-    "Moderate cleaning": 3.8,
-    "Exercise / Dancing": 4.0
+    "Sitting": 1.3,
+    "Office tasks": 1.5,
+    "Play": 3.0,
+    "Standing tasks": 3.0,
+    "Cooking": 3.3,
+    "Cleaning": 3.5,
+    "Exercise": 4.0,
+    "Light activity": 2.0,
+    "Moderate activity": 3.0,
 }
 
 var co2_production_rates = {
@@ -79,6 +80,7 @@ function calculate_co2_rate(age, gender, activityLevel) {
     const rates = co2_production_rates[gender][ageGroup.toString()];
     const metLevels = [1.0, 1.2, 1.4, 1.6, 2.0, 3.0, 4.0];
     const personMET = activity_met[activityLevel];
+    if (personMET==0) return 0;
 
     // Find the nearest MET levels to interpolate between
     let lowerMETIndex = 0;

@@ -6,26 +6,25 @@ var app = new Vue({
         internal_temp: 20,
         outside_temp: -3,
         building: {
-            volume: 75 // 183
+            volume: 183
         },
-        schedule: [
-            { start: "00:00", co2_production: 0, air_change_rate: 0.35, heatloss: 0 },
-            { start: "10:00", co2_production: 36, air_change_rate: 0.35, heatloss: 0 },
-            { start: "18:00", co2_production: 0, air_change_rate: 0.35, heatloss: 0 }
-
+        people: [
+            { gender: "male", age: 38 },
+            { gender: "female", age: 38 },
+            { gender: "female", age: 4 },
+            { gender: "male", age: 0 }
         ],
-        /*
+        activity_met: activity_met,
         schedule: [
-            { start: "00:00", co2_production: 30, air_change_rate: 0.4, heatloss: 0 },
-            { start: "07:30", co2_production: 50, air_change_rate: 0.4, heatloss: 0 },
-            { start: "08:30", co2_production: 0, air_change_rate: 0.4, heatloss: 0 },
-            { start: "12:00", co2_production: 36, air_change_rate: 0.4, heatloss: 0 },
-            { start: "13:00", co2_production: 0, air_change_rate: 0.4, heatloss: 0 },
-            { start: "17:00", co2_production: 40, air_change_rate: 0.4, heatloss: 0 },
-            { start: "18:00", co2_production: 50, air_change_rate: 0.4, heatloss: 0 },
-            { start: "22:00", co2_production: 30, air_change_rate: 0.4, heatloss: 0 }
+            { start: "00:00", person_activities: ["Sleeping", "Sleeping", "Sleeping", "Sleeping"], air_change_rate: 0.5, heatloss: 0 },
+            { start: "07:30", person_activities: ["Standing tasks", "Standing tasks", "Play", "Play"], air_change_rate: 0.5, heatloss: 0 },
+            { start: "08:30", person_activities: ["Away", "Away", "Away", "Away"], air_change_rate: 0.5, heatloss: 0 },
+            { start: "12:00", person_activities: ["Cooking", "Sitting", "Sitting", "Play"], air_change_rate: 0.5, heatloss: 0 },
+            { start: "13:00", person_activities: ["Light activity", "Sitting", "Play", "Play"], air_change_rate: 0.5, heatloss: 0 },
+            { start: "17:00", person_activities: ["Sitting", "Cooking", "Sitting", "Sitting"], air_change_rate: 0.5, heatloss: 0 },
+            { start: "18:00", person_activities: ["Sitting", "Sitting", "Play", "Play"], air_change_rate: 0.5, heatloss: 0 },
+            { start: "22:00", person_activities: ["Sleeping", "Sleeping", "Sleeping", "Sleeping"], air_change_rate: 0.5, heatloss: 0 }
         ],
-        */
         results: {
             mean: 0,
             min: 0,
@@ -117,6 +116,20 @@ app.simulate();
 app.refinements = 3;
 
 function sim() {
+
+    // Calculate CO2 production for each person in the space
+    for (let j = 0; j < app.schedule.length; j++) {
+        let co2_production = 0;
+        // for each person in the space
+        for (let k = 0; k < app.people.length; k++) {
+            // L/hr
+            let activityLevel = app.schedule[j].person_activities[k];
+            co2_production += calculate_co2_rate(app.people[k].age, app.people[k].gender, activityLevel) * 3600;
+
+        }
+        app.schedule[j].co2_production = co2_production;
+    }
+
     co2_data = [];
     exp_decay_data = [];
 
