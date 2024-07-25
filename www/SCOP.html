@@ -218,6 +218,9 @@
                     let carnot_COP = Th / (Th - Tc);
                     let COP = carnot_COP * practical_COP_factor;
 
+                    // Alternative ecodan datasheet approach
+                    // COP = get_ecodan_cop(flowTemp, outsideTemp, heatDemand / app.heatpumpCapacity);
+
                     let elecDemand = heatDemand / COP;
                     app.annual_elec_kwh += elecDemand / 1000;
                     month_elec_kwh += elecDemand / 1000;
