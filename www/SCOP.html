@@ -137,9 +137,9 @@
             baseTemp: 15.5,
             HLP: 161,
             designOutsideTemp: -1.4,
-            designFlowTemp: 37,
+            designFlowTemp: 38,
             minFlowTemp: '',
-            systemDT: 4,
+            systemDT: 5,
             heatpumpCapacity: 5,
             minimumModulation: 0.4,
             // outputs
@@ -211,7 +211,7 @@
                     let flowTemp = MWT + (app.systemDT*0.5);
                     let condensing_offset = 2;
                     let evaporating_offset = -6;
-                    let practical_COP_factor = 0.48;
+                    let practical_COP_factor = 0.5;
 
                     let Th = flowTemp + 273 + condensing_offset;
                     let Tc = outsideTemp + 273 + evaporating_offset;
