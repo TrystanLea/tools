@@ -39,26 +39,47 @@
                 </div>
             </div>
             <div class="col">
-                <label class="form-label">Heat Loss Parameter</label>
+                <label class="form-label">Heat Loss</label>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" v-model.number="HLP" @change="update">
-                    <span class="input-group-text">W/K</span>
+                    <input type="text" class="form-control" v-model.number="heat_loss" @change="update">
+                    <span class="input-group-text">kW</span>
                 </div>
             </div>
             <div class="col">
-                <label class="form-label">Design Flow Temperature</label>
+                <label class="form-label">Average internal temperature</label>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" v-model.number="designFlowTemp" @change="update">
+                    <input type="text" class="form-control" v-model.number="roomT" @change="update">
+                    <span class="input-group-text">°C</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Design outside temperature</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="designOutsideTemp" @change="update">
                     <span class="input-group-text">°C</span>
                 </div>
             </div>
         </div>
         <div class="row">
             <div class="col">
-                <label class="form-label">Minimum Flow Temperature</label>
+                <label class="form-label">Heat pump capacity</label>
                 <div class="input-group mb-3">
-                    <input type="text" class="form-control" v-model.number="minFlowTemp" disabled>
-                    <span class="input-group-text">°C</span>
+                    <input type="text" class="form-control" v-model.number="heatpumpCapacity" @change="update">
+                    <span class="input-group-text">kW</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Practical COP factor</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="practicalCOPfactor" @change="update">
+                    <span class="input-group-text">%</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Minimum modulation</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="minimumModulation" @change="update">
+                    <span class="input-group-text">%</span>
                 </div>
             </div>
             <div class="col">
@@ -66,6 +87,36 @@
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="systemDT" @change="update">
                     <span class="input-group-text">K</span>
+                </div>
+            </div>    
+        </div>        
+        
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Design Flow Temperature</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="designFlowTemp" @change="update">
+                    <span class="input-group-text">°C</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Emitter rated output @ DT50</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="rad_rated_output*0.001 | toFixed(1)" disabled>
+                    <span class="input-group-text">kW</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Number of 1200x600 K2 radiators</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="rad_rated_output*0.001*0.5 | toFixed(1)" disabled>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Flow Temp @ {{ minimumModulation }}% modulation</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="minFlowTemp" disabled>
+                    <span class="input-group-text">°C</span>
                 </div>
             </div>
         </div>
@@ -95,7 +146,7 @@
         <div class="row">
             <div class="col">
                 <!-- A simple flot graph -->
-                <div id="graph" style="width:100%;height:400px;"></div>
+                <div id="graph" style="width:100%;height:350px;"></div>
             </div>
         </div>
         <hr> 
@@ -135,13 +186,15 @@
             // inputs
             roomT: 19.3,
             baseTemp: 15.5,
-            HLP: 161,
+            heat_loss: 3.3,
             designOutsideTemp: -1.4,
             designFlowTemp: 38,
             minFlowTemp: '',
             systemDT: 5,
             heatpumpCapacity: 5,
-            minimumModulation: 0.4,
+            minimumModulation: 40,  // %
+            practicalCOPfactor: 50, // %
+            rad_rated_output: 0,
             // outputs
             annual_heat_kwh: 0,
             annual_elec_kwh: 0,
@@ -166,19 +219,23 @@
                 app.monthly_heat_demand = [];
                 app.monthly_table = [];
                 
+                // Calculate HLP
+                let HLP = (app.heat_loss*1000) / (app.roomT - app.designOutsideTemp);
+                
                 // Calculate radiator size
                 // Rad heat demand is actually smaller than this due to DHW & internal gains..
-                let rad_heat_demand = app.HLP * (app.roomT - app.designOutsideTemp);
+                let rad_heat_demand = app.heat_loss*1000;
                 let MWT = app.designFlowTemp - (app.systemDT*0.5);
                 let deltaT = MWT - app.roomT;
-                let rad_rated_output = rad_heat_demand / Math.pow(deltaT / 50,1.3);
+                app.rad_rated_output = rad_heat_demand / Math.pow(deltaT / 50,1.3);
                 
                 // Calculate minimum flow temperature
-                rad_heat_demand = app.heatpumpCapacity * app.minimumModulation * 1000;
-                deltaT = Math.pow(rad_heat_demand / rad_rated_output, 1/1.3) * 50;
+                rad_heat_demand = app.heatpumpCapacity * (app.minimumModulation*0.01) * 1000;
+                deltaT = Math.pow(rad_heat_demand / app.rad_rated_output, 1/1.3) * 50;
                 MWT = app.roomT + deltaT;
                 app.minFlowTemp = MWT + (app.systemDT*0.5);
                 app.minFlowTemp = app.minFlowTemp.toFixed(1)*1;
+
                 
                 
                 for (var i = 0; i < series[0].data.length; i++) {
@@ -191,7 +248,7 @@
                     }
 
                     // Calculate heat demand using heat loss parameter
-                    let heatDemand = degreeHour * app.HLP;
+                    let heatDemand = degreeHour * HLP;
                     
                     // This approach would need to take into account gains, hence use of degree days approach
                     // let WK = 3300 / 20.7;
@@ -201,7 +258,7 @@
                     app.annual_heat_kwh += heatDemand / 1000;
                     month_heat_kwh += heatDemand / 1000;
 
-                    let deltaT = Math.pow(heatDemand / rad_rated_output, 1/1.3) * 50;
+                    let deltaT = Math.pow(heatDemand / app.rad_rated_output, 1/1.3) * 50;
                     let MWT = app.roomT + deltaT;
                     
                     if (MWT < app.minFlowTemp) {
@@ -211,12 +268,11 @@
                     let flowTemp = MWT + (app.systemDT*0.5);
                     let condensing_offset = 2;
                     let evaporating_offset = -6;
-                    let practical_COP_factor = 0.5;
 
                     let Th = flowTemp + 273 + condensing_offset;
                     let Tc = outsideTemp + 273 + evaporating_offset;
                     let carnot_COP = Th / (Th - Tc);
-                    let COP = carnot_COP * practical_COP_factor;
+                    let COP = carnot_COP * (app.practicalCOPfactor*0.01);
 
                     // Alternative ecodan datasheet approach
                     // COP = get_ecodan_cop(flowTemp, outsideTemp, heatDemand / app.heatpumpCapacity);
