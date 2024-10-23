@@ -25,7 +25,7 @@
                 <h3>Dynamic heat pump simulator</h3>
                 <p>Explore continuous vs intermittent heating, temperature set-backs and schedules.</p>
                 <div class="alert alert-warning"><i class="fa-solid fa-person-digging"></i> This tool is work in
-                    progress. It does not yet implement minimum modulation or take into account defrosts and so will over estimate performance in certain cases. Help welcome to make this tool better.</div>
+                    progress. It does not implement defrosts and general implementation is a crude simplification. Help welcome to make this tool better.</div>
             </div>
         </div>
         <div class="row">
@@ -241,6 +241,20 @@
                             </div>
                         </div>
 
+                        <div class="row">
+                            <div class="col">
+                                <label class="form-label">Sytem volume</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control"
+                                        v-model.number="heatpump.system_water_volume" @change="simulate"
+                                     />
+                                    <span class="input-group-text">L</span>
+                                </div>
+                            </div>
+                            <div class="col">
+                            </div>
+                        </div>
+
                     </div>
                 </div>
                 <br>
@@ -299,4 +313,4 @@
         </div>
     </div>
 </body>
-<script src="dynamic_heatpump_v1.js?v=6"></script>
+<script src="dynamic_heatpump_v1.js?v=7"></script>

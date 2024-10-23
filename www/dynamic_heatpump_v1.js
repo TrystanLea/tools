@@ -5,6 +5,7 @@ var WEATHER_COMP_CURVE = 1;
 var app = new Vue({
     el: '#app',
     data: {
+        days: 4,
         building: {
             internal_gains: 390,
             fabric: [
@@ -15,15 +16,15 @@ var app = new Vue({
             fabric_WK: 0
         },
         external: {
-            mid: 6,
-            swing: 4,
+            mid: 4,
+            swing: 2,
             min_time: "06:00",
             max_time: "14:00"
         },
         heatpump: {
             capacity: 5000,
             min_modulation: 2000,
-            system_water_volume: 60, // Litres
+            system_water_volume: 120, // Litres
             flow_rate: 12, // Litres per minute
             system_DT: 5,
             radiatorRatedOutput: 15000,
@@ -33,8 +34,8 @@ var app = new Vue({
             mode: AUTO_ADAPT,
             wc_use_outside_mean: 1,
             
-            Kp: 10000,
-            Ki: 0.1,
+            Kp: 2500,
+            Ki: 0.2,
             Kd: 0.0
         },
         schedule: [
@@ -153,7 +154,7 @@ function sim() {
     var start_t1 = t1;
 
     var timestep = 30;
-    var itterations = 3600 * 24 / timestep;
+    var itterations = 3600 * 24 * app.days / timestep;
 
     app.results.elec_kwh = 0;
     app.results.heat_kwh = 0;
@@ -168,8 +169,9 @@ function sim() {
     app.max_room_temp = 0;
     
     heatpump_state = 0;
-    
-    time_off = -600;
+    flow_temperature = room;
+    return_temperature = room;
+    MWT_off = 200;
     
     // Used for outside temperature waveform generation
     var outside_min_time = time_str_to_hour(app.external.min_time);
@@ -179,10 +181,10 @@ function sim() {
     var ramp_up = outside_max_time - outside_min_time;
     var ramp_down = 24 - ramp_up;
     
-    
     for (var i = 0; i < itterations; i++) {
         let time = i * timestep;
         let hour = time / 3600;
+        hour = hour % 24;
         
         // Outside temperature model
         if (hour>=outside_min_time && hour<outside_max_time) {
@@ -240,9 +242,8 @@ function sim() {
             heat_requirement = room_outside_DT * app.building.fabric_WK
             heatpump_heat = heat_requirement - app.building.internal_gains
             rad_room_DT = Math.pow(heatpump_heat / app.heatpump.radiatorRatedOutput, 1 / 1.3) * app.heatpump.radiatorRatedDT
-            MWT = setpoint + rad_room_DT
-            flow_temperature = MWT + (app.heatpump.system_DT*0.5)
-        
+
+            // MWT = setpoint + rad_room_DT
         }
 
         // Apply limits
@@ -254,24 +255,16 @@ function sim() {
         }
         
         // Minimum modulation cycling control
-        // Feel free to help improved this:
-        /*
-        // turn heatpump back on if heat demand is high enough 
-        // and we have been off for more than set time
-        if (heatpump_state==0 && heatpump_heat>=2000 && (time-time_off)>600) {
+        
+        // if heat pump is off and demand for heat is more than minimum modulation turn heat pump on
+        if (heatpump_state==0 && heatpump_heat>=(app.heatpump.capacity*0.4) && MWT<(MWT_off-3)) {
             heatpump_state = 1;
         }
             
-        // If we are below minimum modulation turn heat pump off for x minutes
-        if (heatpump_heat<2000 && heatpump_state==1) {
-            time_off = time;
+        // If we are below minimum modulation turn heat pump off
+        if (heatpump_heat<(app.heatpump.capacity*0.4) && heatpump_state==1) {
+            MWT_off = MWT;
             heatpump_state = 0;
-            // if we are below minimum modulation 
-            // we are also near the setpoint 
-            // Kp responsiveness can be reduced
-            // so that Pterm does not grow excessively during off time
-            // there is probable a better way of doing this
-            app.control.Kp = 2000;
         }
         
         // Set heat pump heat to zero if state is off
@@ -279,52 +272,30 @@ function sim() {
              heatpump_heat = 0;
         }
         
-        // Reset Kp if set point changes
-        if (setpoint!=last_setpoint) {
-            app.control.Kp = 10000;
-        }*/
-        
-
-        /*
         // Implementation includes system volume
-        // Does not work well yet
 
+        // Important conceptual simplification is to model the whole system as a single volume of water
+        // a bit like a water or oil filled radiator. The heat pump condencer sits inside this volume and
+        // the volume radiates heat according to it's mean water temperature.
+
+        // The important system temperature is therefore mean water temperature
+        // Flow and return temperatures are calculated later as an output based on flow rate.
+
+        // 1. Heat added to system volume from heat pump
         MWT += (heatpump_heat * timestep) / (app.heatpump.system_water_volume * 4187)
 
-        system_DT = heatpump_heat / ((app.heatpump.flow_rate/60) * 4187);
-
-        flow_temperature = MWT + system_DT*0.5;
-        return_temperature = MWT - system_DT*0.5;
-
+        // 2. Calculate radiator output based on Room temp and MWT
         Delta_T = MWT - room;
-        radiator_heat = RatedPower * Math.pow(Delta_T / RatedDeltaT, 1.3);
+        radiator_heat = app.heatpump.radiatorRatedOutput * Math.pow(Delta_T / app.heatpump.radiatorRatedDT, 1.3);
 
+        // 3. Subtract this heat output from MWT
         MWT -= (radiator_heat * timestep) / (app.heatpump.system_water_volume * 4187)
-        */
-
-        // Radiator model
-        Delta_T = Math.pow(heatpump_heat / app.heatpump.radiatorRatedOutput, 1 / 1.3) * app.heatpump.radiatorRatedDT;
-
-        if (heatpump_heat>0) {
-            system_DT = app.heatpump.system_DT // heatpump_heat / ((app.heatpump.flow_rate / 60) * 4187);
-        } else {
-            system_DT = 0
-        }
         
-        MWT = room + Delta_T;
-        flow_temperature = MWT + system_DT * 0.5;
 
-        // Limit flow temperature
-        if (flow_temperature > max_flowT) {
-            flow_temperature = max_flowT
-        }
+        let system_DT = heatpump_heat / ((app.heatpump.flow_rate / 60) * 4187);
 
-        MWT = flow_temperature - system_DT * 0.5;
-        return_temperature = MWT - system_DT * 0.5;
-
-        Delta_T = MWT - room;
-        heatpump_heat = app.heatpump.radiatorRatedOutput * Math.pow(Delta_T / app.heatpump.radiatorRatedDT, 1.3);
-        radiator_heat = heatpump_heat;
+        flow_temperature = MWT + (system_DT * 0.5);
+        return_temperature = MWT - (system_DT * 0.5);
 
         // Simple carnot equation based heat pump model
         let condensor = flow_temperature + 2;
@@ -368,6 +339,10 @@ function sim() {
         heat_data.push([timems, heatpump_heat]);
     }
 
+    // 
+    app.results.elec_kwh = app.results.elec_kwh / app.days;
+    app.results.heat_kwh = app.results.heat_kwh / app.days;
+
     calculate_steady_state();
     
     // Automatic refinement, disabled for now, running simulation 3 times instead.
@@ -384,7 +359,7 @@ function calculate_steady_state(){
     // Steady state flow temperature
     dT = Math.pow(heating_demand / app.heatpump.radiatorRatedOutput, 1 / 1.3) * app.heatpump.radiatorRatedDT;
     let MWT = app.max_room_temp + dT;
-    let system_DT = app.heatpump.system_DT // heating_demand / ((app.heatpump.flow_rate / 60) * 4187);
+    let system_DT = heating_demand / ((app.heatpump.flow_rate / 60) * 4187);
     let flow_temperature = MWT + system_DT * 0.5;
 
     // Steady state COP
