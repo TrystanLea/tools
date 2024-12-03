@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Volume simulator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/fontawesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/solid.min.css">
+
+</head>
+
+<body>
+    <div class="container" style="max-width:1200px" id="app">
+        <div class="row">
+            <div class="col">
+                <br>
+                <h3>Volume simulator</h3>
+                <p>Explore system volume, starts per hour and cycling</p>
+            </div>
+        </div>
+        <div class="row">
+            <div id="graph_bound" style="width:100%; height:400px; position:relative; ">
+                <div id="graph"></div>
+            </div>
+        </div>
+        <br>
+        <div class="row">
+            <div class="col">
+                <div class="card">
+                    <div class="card-body">
+
+                        <div class="row">
+                            <div class="col">
+                                <label class="form-label">Minimum heat output</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="minimum_heat_output"
+                                        @change="simulate" />
+                                    <span class="input-group-text">W</span>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <label class="form-label">Heat demand</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="heat_demand" @change="simulate"
+                                        @change="simulate" />
+                                    <span class="input-group-text">W</span>
+                                </div>
+                            </div> 
+                            <div class="col">
+                                <label class="form-label">Starts per hour</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="starts_per_hour" @change="simulate"
+                                        @change="simulate" />
+                                </div>
+                            </div> 
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <label class="form-label">Heat emitter rated output</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control"
+                                        v-model.number="radiatorRatedOutput" @change="simulate"
+                                     />
+                                    <span class="input-group-text">W</span>
+                                </div>
+                            </div>
+
+                            <div class="col">
+                                <label class="form-label">Sytem volume</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control"
+                                        v-model.number="system_volume" @change="simulate"
+                                     />
+                                    <span class="input-group-text">L</span>
+                                </div>
+                            </div>
+
+
+                            <div class="col">
+                                <label class="form-label">Cycle DT</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control"
+                                        v-model.number="cycle_DT" disabled
+                                     />
+                                    <span class="input-group-text">K</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+                <br>
+
+            </div>
+        </div>
+    </div>
+</body>
+<script src="volume_sim.js?v=8"></script>
