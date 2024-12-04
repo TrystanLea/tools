@@ -16,7 +16,8 @@ var app = new Vue({
         on_time: 0,
         return_DT: 0,
         mwt_DT: 0,
-        system_DT: 3
+        system_DT: 3,
+        suggested_volume: 0
     },
     methods: {
         simulate: function () {
@@ -148,7 +149,15 @@ function sim() {
     }
 
 
+    if (app.starts_per_hour != null) {
+        app.starts_per_hour = (app.starts_per_hour*1).toFixed(3);
+    }
+
     console.log("Mean radiator heat output: " + mean_rad_heat.toFixed(0) + "W (sim_count: " + sim_count + ")"); 
+
+
+    // Suggested system volume based on simple minimum on time calculation
+    app.suggested_volume = (app.minimum_on_time_min * 60 * app.minimum_heat_output) / (4187 * 5);
 }
 
 

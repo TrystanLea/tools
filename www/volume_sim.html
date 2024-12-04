@@ -146,8 +146,21 @@
                 </div>
                 <br>
 
+
+                <div class="card">
+                    <div class="card-body">
+                        <p>Simplified minimum volume calculation:</p>
+                        <p><i>Minimum volume = (minimum heat output × minimum compressor on time) ÷ (specific heat × target DT)</i></p>
+                        <p>Above example: ({{ minimum_heat_output }}W × {{ minimum_on_time_min*60 }}s) ÷ (4187 J/kg.K × 5K) = <b>{{ suggested_volume | toFixed(0) }} Litres</b></p>
+                        <p><i>Target DT range is typically 5-10K</i></p>
+                        <p>Think of this as the volume required to provide the compressor with the minimum on time under a zero load (no emitter output) condition assuming the volume increases in temperature by the target DT given.</p>
+
+                    </div> 
+                </div>
+
+
             </div>
         </div>
     </div>
 </body>
-<script src="volume_sim.js?v=15"></script>
+<script src="volume_sim.js?v=16"></script>
