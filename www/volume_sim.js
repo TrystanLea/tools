@@ -6,11 +6,11 @@ var app = new Vue({
         roomT: 20,
         minimum_heat_output: 2000,
         heat_demand: 1000,
-        system_volume: 100,
+        system_volume: 75,
         radiatorRatedOutput: 15000,
         radiatorRatedDT: 50,
         max_room_temp: 0,
-        starts_per_hour: 3,
+        starts_per_hour: 1,
         return_DT: 0,
         mwt_DT: 0,
         system_DT: 3
