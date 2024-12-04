@@ -77,9 +77,18 @@
                         <div class="row">
 
                             <div class="col">
-                                <label class="form-label">Starts per hour</label>
+                                <label class="form-label">Minimum compressor run time</label>
                                 <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="starts_per_hour" @change="simulate"
+                                    <input type="text" class="form-control" v-model.number="minimum_on_time_min" @change="simulate"
+                                        @change="simulate" />
+                                    <span class="input-group-text">min</span>
+                                </div>
+                            </div> 
+
+                            <div class="col">
+                                <label class="form-label">Maximum starts per hour</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="max_starts_per_hour" @change="simulate"
                                         @change="simulate" />
                                 </div>
                             </div> 
@@ -101,8 +110,15 @@
                                     <span class="input-group-text">L</span>
                                 </div>
                             </div>
-
-
+                        </div> 
+                        <div class="row">
+                            <div class="col">
+                                <label class="form-label">Starts per hour</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="starts_per_hour" disabled
+                                        @change="simulate" />
+                                </div>
+                            </div> 
                             <div class="col">
                                 <label class="form-label">MWT DT</label>
                                 <div class="input-group mb-3">
@@ -132,4 +148,4 @@
         </div>
     </div>
 </body>
-<script src="volume_sim.js?v=11"></script>
+<script src="volume_sim.js?v=14"></script>

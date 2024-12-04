@@ -5,12 +5,14 @@ var app = new Vue({
         hours: 0,
         roomT: 20,
         minimum_heat_output: 2000,
-        heat_demand: 1000,
+        heat_demand: 500,
         system_volume: 75,
         radiatorRatedOutput: 15000,
         radiatorRatedDT: 50,
         max_room_temp: 0,
+        max_starts_per_hour: 1,
         starts_per_hour: 1,
+        minimum_on_time_min: 12, // 12 minutes
         return_DT: 0,
         mwt_DT: 0,
         system_DT: 3
@@ -52,19 +54,28 @@ function sim() {
     returnT_data = [];
     heatpump_heat_data = [];
     radiator_heat_data = [];
+    
+    // cycling control
+    var duty_cycle = app.heat_demand / app.minimum_heat_output;
+    if (duty_cycle > 1) duty_cycle = 1;
+
+    // 1. Calculate on_time, period and starts per hour based on minimum on time
+    var on_time = app.minimum_on_time_min*60;
+    period = on_time / duty_cycle;
+    app.starts_per_hour = 3600 / period;
+
+    // 2. If starts per hour is greater than 1, set it to 1 and recalculate period and on_time
+    if (app.starts_per_hour > app.max_starts_per_hour) {
+        app.starts_per_hour = app.max_starts_per_hour;
+
+        period = 3600 / app.starts_per_hour;
+        on_time = period * duty_cycle;
+    }
 
     app.hours = app.cycles_to_simulate * 1 / app.starts_per_hour;
 
     var timestep = 10;
     var itterations = 3600 * app.hours / timestep;
-
-    // cycling control
-    var duty_cycle = app.heat_demand / app.minimum_heat_output;
-    if (duty_cycle > 1) duty_cycle = 1;
-
-    var period = 3600 / app.starts_per_hour;
-    var on_time = period * duty_cycle;
-    var off_time = period - on_time;
 
     var rad_heat_sum = 0;
     
