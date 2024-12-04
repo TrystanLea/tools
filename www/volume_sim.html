@@ -39,7 +39,7 @@
                     <div class="card-body">
 
                         <div class="row">
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Minimum heat output</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control" v-model.number="minimum_heat_output"
@@ -47,7 +47,7 @@
                                     <span class="input-group-text">W</span>
                                 </div>
                             </div>
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Heat demand</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control" v-model.number="heat_demand" @change="simulate"
@@ -55,7 +55,7 @@
                                     <span class="input-group-text">W</span>
                                 </div>
                             </div> 
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Heat emitter rated output @ DT50</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control"
@@ -64,7 +64,7 @@
                                     <span class="input-group-text">W</span>
                                 </div>
                             </div>
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">System DT (Fixed)</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control"
@@ -75,44 +75,38 @@
                             </div>
                         </div>
                         <div class="row">
-
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Minimum compressor run time</label>
                                 <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="minimum_on_time_min" @change="simulate"
-                                        @change="simulate" />
+                                    <input type="text" class="form-control" v-model.number="minimum_on_time_min" @change="simulate" />
                                     <span class="input-group-text">min</span>
                                 </div>
                             </div> 
 
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Maximum starts per hour</label>
                                 <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="max_starts_per_hour" @change="simulate"
-                                        @change="simulate" />
+                                    <input type="text" class="form-control" v-model.number="max_starts_per_hour" @change="simulate" />
                                 </div>
                             </div> 
 
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Cycles to simulate</label>
                                 <div class="input-group mb-3">
-                                    <input type="text" class="form-control" v-model.number="cycles_to_simulate" @change="simulate"
-                                        @change="simulate" />
+                                    <input type="text" class="form-control" v-model.number="cycles_to_simulate" @change="simulate" />
                                 </div>
                             </div> 
 
-                            <div class="col">
-                                <label class="form-label">Sytem volume</label>
+                            <div class="col-md-6 col-lg-3">
+                                <label class="form-label">System volume</label>
                                 <div class="input-group mb-3">
-                                    <input type="text" class="form-control"
-                                        v-model.number="system_volume" @change="simulate"
-                                     />
+                                    <input type="text" class="form-control" v-model.number="system_volume" @change="simulate" />
                                     <span class="input-group-text">L</span>
                                 </div>
                             </div>
                         </div> 
                         <div class="row">
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Compressor run time</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control" v-model.number="on_time" disabled
@@ -120,14 +114,14 @@
                                     <span class="input-group-text">min</span>
                                 </div>
                             </div>                             
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Starts per hour</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control" v-model.number="starts_per_hour" disabled
                                         @change="simulate" />
                                 </div>
                             </div> 
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">MWT DT</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control"
@@ -137,7 +131,7 @@
                                 </div>
                             </div>
 
-                            <div class="col">
+                            <div class="col-md-6 col-lg-3">
                                 <label class="form-label">Return DT</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control"
