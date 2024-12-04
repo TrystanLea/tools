@@ -113,6 +113,14 @@
                         </div> 
                         <div class="row">
                             <div class="col">
+                                <label class="form-label">Compressor run time</label>
+                                <div class="input-group mb-3">
+                                    <input type="text" class="form-control" v-model.number="on_time" disabled
+                                        @change="simulate" />
+                                    <span class="input-group-text">min</span>
+                                </div>
+                            </div>                             
+                            <div class="col">
                                 <label class="form-label">Starts per hour</label>
                                 <div class="input-group mb-3">
                                     <input type="text" class="form-control" v-model.number="starts_per_hour" disabled
@@ -148,4 +156,4 @@
         </div>
     </div>
 </body>
-<script src="volume_sim.js?v=14"></script>
+<script src="volume_sim.js?v=15"></script>

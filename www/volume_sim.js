@@ -13,6 +13,7 @@ var app = new Vue({
         max_starts_per_hour: 1,
         starts_per_hour: 1,
         minimum_on_time_min: 12, // 12 minutes
+        on_time: 0,
         return_DT: 0,
         mwt_DT: 0,
         system_DT: 3
@@ -54,7 +55,15 @@ function sim() {
     returnT_data = [];
     heatpump_heat_data = [];
     radiator_heat_data = [];
+
+    if (app.minimum_heat_output<1) {
+        app.minimum_heat_output = 1;
+    }
     
+    if (app.heat_demand < app.minimum_heat_output*0.01) {
+        app.heat_demand = app.minimum_heat_output*0.01;
+    }
+
     // cycling control
     var duty_cycle = app.heat_demand / app.minimum_heat_output;
     if (duty_cycle > 1) duty_cycle = 1;
@@ -73,6 +82,7 @@ function sim() {
     }
 
     app.hours = app.cycles_to_simulate * 1 / app.starts_per_hour;
+    app.on_time = (on_time / 60).toFixed(0);
 
     var timestep = 10;
     var itterations = 3600 * app.hours / timestep;
