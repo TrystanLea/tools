@@ -44,6 +44,13 @@
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
+            <div class="col">
+                <label class="form-label">Battery</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="battery.capacity" @change="update">
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
         </div>
         <div class="row">
             <div class="col">
@@ -113,6 +120,18 @@
             // inputs
             solar_kWp: 4,
             solar_kWh_per_kWp: 870,
+
+            battery: {
+                capacity: 0,
+                soc: 0,
+                charge_kwh: 0,
+                discharge_kwh: 0,
+                charge_max: 3.5,
+                discharge_max: 3.5,
+                charge_efficiency: 0.9,
+                discharge_efficiency: 0.9
+            },
+
             // outputs
             annual_solar_kwh: 0,
             annual_demand_kwh: 0,
@@ -153,6 +172,10 @@
                 let month_demand_kwh = 0;
                 let month_import_kwh = 0;
                 let month_export_kwh = 0;
+
+                app.battery.soc = app.battery.capacity * 0.5;
+                app.battery.charge_max = app.solar_kWp * 1000;
+                app.battery.discharge_max = app.solar_kWp * 1000;
                 
                 let month = new Date(series[0].data[0][0]).getMonth();
 
@@ -174,6 +197,52 @@
 
                     // Balance
                     var balance = solarpv - demand;
+
+                    // Battery
+                    if (app.battery.capacity>0) {
+                        if (balance>0) {
+                            
+                            // Charge battery
+                            let charge = balance;
+                            if (charge > app.battery.charge_max) {
+                                charge = app.battery.charge_max;
+                            }
+                            let charge_after_loss = charge * app.battery.charge_efficiency;
+                            let soc_inc = charge_after_loss * power_to_kwh;
+                            // Limit charge to battery capacity
+                            if (app.battery.soc + soc_inc > app.battery.capacity) {
+                                soc_inc = app.battery.capacity - app.battery.soc;
+                                charge_after_loss = soc_inc * (1/power_to_kwh);
+                                charge = charge_after_loss / app.battery.charge_efficiency;
+                            }
+                            // if (charge>app.battery.max_charge) {
+                            //     app.battery.max_charge = charge;
+                            // }
+                            app.battery.soc += soc_inc;
+                            balance -= charge;
+                            // app.battery.charge_kwh += charge * power_to_kwh;
+                        } else {
+                            // Discharge battery
+                            let discharge = -balance;
+                            if (discharge > app.battery.discharge_max) {
+                                discharge = app.battery.discharge_max;
+                            }
+                            let discharge_before_loss = discharge / app.battery.discharge_efficiency;
+                            let soc_dec = discharge_before_loss * power_to_kwh;
+                            // Limit discharge to battery SOC
+                            if (app.battery.soc - soc_dec < 0) {
+                                soc_dec = app.battery.soc;
+                                discharge_before_loss = soc_dec * (1/power_to_kwh);
+                                discharge = discharge_before_loss * app.battery.discharge_efficiency;
+                            }
+                            // if (discharge>app.battery.max_discharge) {
+                            //     app.battery.max_discharge = discharge;
+                            // }   
+                            app.battery.soc -= soc_dec;
+                            balance += discharge;
+                            // app.battery.discharge_kwh += discharge * power_to_kwh;
+                        }
+                    }
 
                     var export_to_grid = 0;
                     var import_from_grid = 0;
