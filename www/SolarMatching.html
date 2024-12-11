@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Solar Matching Explorer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/vue@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.6.3.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.min.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script> 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.selection.min.js"></script>
+
+    <script src="lib/feed.js?v=1"></script>
+
+</head>
+
+<body>
+
+    <div class="container" style="max-width:800px" id="app">
+        <div class="row">
+            <div class="col">
+                <br>
+                <h3>Explore Solar Matching</h3>
+                <p></p>
+            </div>
+        </div>
+        <hr>
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Solar kWp</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="solar_kWp" @change="update">
+                    <span class="input-group-text">kW</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Solar kWh/kWp</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="solar_kWh_per_kWp" @change="update">
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Annual solar generation</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="annual_solar_kwh | toFixed(0)" disabled>
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <!-- A simple flot graph -->
+                <div id="graph" style="width:100%;height:350px;"></div>
+            </div>
+        </div>
+
+        
+        <hr> 
+        <div class="row">
+            <div class="col">
+                <table class="table">
+                    <tr>
+                        <th>Month</th>
+                        <th>Solar</th>
+                        <th>Demand</th>
+                        <th>Import</th>
+                        <th>Export</th>
+                        <th>From solar</th>
+                    </tr>
+                    <tr v-for="month in monthly_table">
+                        <td>{{month.month}}</td>
+                        <td>{{month.solar_kwh | toFixed(0)}} kWh</td>
+                        <td>{{month.demand_kwh | toFixed(0)}} kWh</td>
+                        <td>{{month.import_kwh | toFixed(0)}} kWh</td>
+                        <td>{{month.export_kwh | toFixed(0)}} kWh</td>
+                        <td>{{100 * (month.demand_kwh - month.import_kwh) / month.demand_kwh | toFixed(0)}} %</td>
+                    </tr>
+                    <!-- totals-->
+                    <tr>
+                        <td><b>Total</b></td>
+                        <td><b>{{annual_solar_kwh | toFixed(0)}} kWh</b></td>
+                        <td><b>{{annual_demand_kwh | toFixed(0)}} kWh</b></td>
+                        <td><b>{{annual_import_kwh | toFixed(0)}} kWh</b></td>
+                        <td><b>{{annual_export_kwh | toFixed(0)}} kWh</b></td>
+                        <td><b>{{100 * (annual_demand_kwh - annual_import_kwh) / annual_demand_kwh | toFixed(0)}} %</b></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <hr>
+    </div>
+
+</body>
+
+</html>
+
+<script>
+    // Start by loading hourly average outside temperature data from emoncms.org API
+    // Create basic Vue outline
+    var series = [];
+
+    var app = new Vue({
+        el: '#app',
+        data: {
+            // inputs
+            solar_kWp: 4,
+            solar_kWh_per_kWp: 870,
+            // outputs
+            annual_solar_kwh: 0,
+            annual_demand_kwh: 0,
+            annual_import_kwh: 0,
+            annual_export_kwh: 0,
+
+            monthly_solar_kwh: [],
+            monthly_demand_kwh: [],
+            monthly_import_kwh: [],
+            monthly_export_kwh: [],
+            monthly_solar_self_use_kwh: [],
+
+            monthly_table: [],
+
+            interval: 900
+        },
+        methods: {
+            update: function () {
+                app.model();
+            },
+            model: function() {
+
+                var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+                // reset for new calculation
+                app.monthly_solar_kwh = [];
+                app.monthly_demand_kwh = [];
+                app.monthly_export_kwh = [];
+                app.monthly_solar_self_use_kwh = [];
+                app.monthly_table = [];
+
+                app.annual_solar_kwh = 0;
+                app.annual_demand_kwh = 0;
+                app.annual_import_kwh = 0;
+                app.annual_export_kwh = 0;
+
+                let month_solar_kwh = 0;
+                let month_demand_kwh = 0;
+                let month_import_kwh = 0;
+                let month_export_kwh = 0;
+                
+                let month = new Date(series[0].data[0][0]).getMonth();
+
+                let power_to_kwh = app.interval / 3600000;
+
+                // Normalise solar data to match solar_kWp
+                let input_solar_data_kwh = 0;
+                for (var i = 0; i < series[0].data.length; i++) {
+                    let solarpv = series[0].data[i][1];
+                    input_solar_data_kwh += solarpv * power_to_kwh;
+                }
+                var solar_normalisation_factor = app.solar_kWh_per_kWp / input_solar_data_kwh;
+                
+                for (var i = 0; i < series[0].data.length; i++) {
+                    // Solar generation
+                    let solarpv = series[0].data[i][1] * solar_normalisation_factor * app.solar_kWp;
+                    // Demand
+                    let demand = series[1].data[i][1];
+
+                    // Balance
+                    var balance = solarpv - demand;
+
+                    var export_to_grid = 0;
+                    var import_from_grid = 0;
+
+                    if (balance>0) {
+                        export_to_grid = balance;
+                    } else {
+                        import_from_grid = -balance;
+                    }
+                    
+                    // convert to cumulative kWh
+                    app.annual_solar_kwh += solarpv * power_to_kwh;
+                    app.annual_demand_kwh += demand * power_to_kwh;
+                    app.annual_import_kwh += import_from_grid * power_to_kwh;
+                    app.annual_export_kwh += export_to_grid * power_to_kwh;
+
+                    month_solar_kwh += solarpv * power_to_kwh;
+                    month_demand_kwh += demand * power_to_kwh;
+                    month_import_kwh += import_from_grid * power_to_kwh;
+                    month_export_kwh += export_to_grid * power_to_kwh;
+
+                    // Create timeseries of monthly heat demand for graph and table
+                    let lastMonth = month;
+                    month = new Date(series[0].data[i][0]).getMonth();
+                    if (month != lastMonth) {
+
+                        let month_solar_self_use_kwh = month_solar_kwh - month_export_kwh;
+
+                        app.monthly_solar_kwh.push([lastMonth, month_solar_kwh]);
+                        app.monthly_solar_self_use_kwh.push([lastMonth, month_solar_self_use_kwh]);
+                        app.monthly_demand_kwh.push([lastMonth, month_demand_kwh]);
+                        app.monthly_export_kwh.push([lastMonth, month_export_kwh*-1]);
+                        
+                        app.monthly_table.push({
+                            month: months[lastMonth],
+                            solar_kwh: month_solar_kwh,
+                            demand_kwh: month_demand_kwh,
+                            import_kwh: month_import_kwh,
+                            export_kwh: month_export_kwh
+                        });
+
+                        month_solar_kwh = 0;
+                        month_demand_kwh = 0;
+                        month_import_kwh = 0;
+                        month_export_kwh = 0;
+                    }
+                }
+
+                $.plot("#graph", [{
+                        data: app.monthly_demand_kwh,
+                        label: "Demand",
+                        color: "#0699fa",
+                        bars: { show: true, align: "center", fill: 0.8, lineWidth:0}
+                    },{
+                        data: app.monthly_solar_self_use_kwh,
+                        label: "Self use",
+                        color: "#dccc1f",
+                        bars: { show: true, align: "center", fill: 0.6, lineWidth:0}
+                    },
+                    {
+                        data: app.monthly_export_kwh,
+                        label: "Export",
+                        color: "#dccc1f",
+                        bars: { show: true, align: "center", fill: 0.8, lineWidth:0}
+                    }
+                ],
+                {
+                    // bar graph
+                    series: {
+                        bars: {
+                            show: true,
+                            barWidth: 0.8,
+                            align: "center"
+                        }
+                    },
+                    xaxis: {
+                    },
+                    yaxis: {
+                    },
+                    selection: {
+                        mode: "x"
+                    },
+                    grid:{
+                        hoverable: true,
+                        clickable: true
+                    }
+                });
+            }
+        },
+        filters: {
+            toFixed: function (val, dp) {
+                if (isNaN(val)) {
+                    return val;
+                } else {
+                    return val.toFixed(dp)
+                }
+            }
+        },
+        mounted: function () {
+            feed.getdata("516488,516489","2023-01-01T00:00:00Z","2024-01-01T00:00:00Z",this.interval,1,function(result) {
+                series = result;
+                app.update();
+            });
+        }
+    });
+
+</script>
