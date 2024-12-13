@@ -25,7 +25,7 @@
             <div class="col">
                 <br>
                 <h3>Explore Solar Matching</h3>
-                <p></p>
+                <p>(Example demand profile, home lighting, appliances, cooking and a heat pump = 4012 kWh/year)</p>
             </div>
         </div>
         <hr>
@@ -45,22 +45,52 @@
                 </div>
             </div>
             <div class="col">
-                <label class="form-label">Battery</label>
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" v-model.number="battery.capacity" @change="update">
-                    <span class="input-group-text">kWh</span>
-                </div>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col">
                 <label class="form-label">Annual solar generation</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="annual_solar_kwh | toFixed(0)" disabled>
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
+
         </div>
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Battery</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="battery.capacity" @change="update">
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col" v-if="battery.capacity>100">
+                <label class="form-label">SOC Start</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="battery.soc_start" @change="update">
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Import rate</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="import_rate" @change="update">
+                    <span class="input-group-text">p/kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Export rate</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="export_rate" @change="update">
+                    <span class="input-group-text">p/kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Annual cost</label>
+                <div class="input-group mb-3">
+                    <span class="input-group-text">£</span>
+                    <input type="text" class="form-control" :value="annual_cost | toFixed(0)" disabled>
+                </div>
+            </div>
+        </div>
+
 
         <div class="row">
             <div class="col">
@@ -124,6 +154,7 @@
             battery: {
                 capacity: 0,
                 soc: 0,
+                soc_start: 0,
                 charge_kwh: 0,
                 discharge_kwh: 0,
                 charge_max: 3.5,
@@ -131,6 +162,10 @@
                 charge_efficiency: 0.9,
                 discharge_efficiency: 0.9
             },
+
+            import_rate: 23,
+            export_rate: 15,
+            annual_cost: 0,
 
             // outputs
             annual_solar_kwh: 0,
@@ -161,6 +196,7 @@
                 app.monthly_demand_kwh = [];
                 app.monthly_export_kwh = [];
                 app.monthly_solar_self_use_kwh = [];
+                app.monthly_soc = [];
                 app.monthly_table = [];
 
                 app.annual_solar_kwh = 0;
@@ -173,7 +209,7 @@
                 let month_import_kwh = 0;
                 let month_export_kwh = 0;
 
-                app.battery.soc = app.battery.capacity * 0.5;
+                app.battery.soc = app.battery.soc_start;
                 app.battery.charge_max = app.solar_kWp * 1000;
                 app.battery.discharge_max = app.solar_kWp * 1000;
                 
@@ -275,6 +311,8 @@
                         app.monthly_solar_self_use_kwh.push([lastMonth, month_solar_self_use_kwh]);
                         app.monthly_demand_kwh.push([lastMonth, month_demand_kwh]);
                         app.monthly_export_kwh.push([lastMonth, month_export_kwh*-1]);
+
+                        app.monthly_soc.push([lastMonth, app.battery.soc]);
                         
                         app.monthly_table.push({
                             month: months[lastMonth],
@@ -291,33 +329,40 @@
                     }
                 }
 
-                $.plot("#graph", [{
+                app.annual_cost = (app.annual_import_kwh * app.import_rate * 0.01) - (app.annual_export_kwh * app.export_rate * 0.01);
+
+
+                var plot_series = [
+                    {
                         data: app.monthly_demand_kwh,
                         label: "Demand",
                         color: "#0699fa",
-                        bars: { show: true, align: "center", fill: 0.8, lineWidth:0}
+                        bars: { show: true, align: "center", fill: 0.8, lineWidth:0, barWidth: 0.8}
                     },{
                         data: app.monthly_solar_self_use_kwh,
                         label: "Self use",
                         color: "#dccc1f",
-                        bars: { show: true, align: "center", fill: 0.6, lineWidth:0}
+                        bars: { show: true, align: "center", fill: 0.6, lineWidth:0, barWidth: 0.8}
                     },
                     {
                         data: app.monthly_export_kwh,
                         label: "Export",
                         color: "#dccc1f",
-                        bars: { show: true, align: "center", fill: 0.8, lineWidth:0}
+                        bars: { show: true, align: "center", fill: 0.8, lineWidth:0, barWidth: 0.8}
                     }
-                ],
-                {
-                    // bar graph
-                    series: {
-                        bars: {
-                            show: true,
-                            barWidth: 0.8,
-                            align: "center"
-                        }
-                    },
+                ];
+
+                if (app.battery.capacity>100) {
+                    plot_series.push({
+                        data: app.monthly_soc,
+                        label: "SOC",
+                        color: "#000",
+                        yaxis: 2,
+                        lines: { show: true, fill: false, lineWidth: 1}
+                    });
+                }
+
+                var options = {
                     xaxis: {
                     },
                     yaxis: {
@@ -329,7 +374,9 @@
                         hoverable: true,
                         clickable: true
                     }
-                });
+                };
+
+                $.plot("#graph", plot_series, options);
             }
         },
         filters: {
