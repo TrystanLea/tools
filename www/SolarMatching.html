@@ -87,6 +87,9 @@
                 <div class="input-group mb-3">
                     <span class="input-group-text">£</span>
                     <input type="text" class="form-control" :value="annual_cost | toFixed(0)" disabled>
+                    <input type="text" class="form-control" :value="saving | toFixed(0)" disabled>
+                    <span class="input-group-text">%</span>
+
                 </div>
             </div>
         </div>
@@ -166,6 +169,8 @@
             import_rate: 23,
             export_rate: 15,
             annual_cost: 0,
+            saving: 0,
+            annual_cost_str: '',
 
             // outputs
             annual_solar_kwh: 0,
@@ -330,6 +335,7 @@
                 }
 
                 app.annual_cost = (app.annual_import_kwh * app.import_rate * 0.01) - (app.annual_export_kwh * app.export_rate * 0.01);
+                app.saving = -1*100*(1 - (app.annual_cost / (app.import_rate * app.annual_demand_kwh * 0.01)));
 
 
                 var plot_series = [
