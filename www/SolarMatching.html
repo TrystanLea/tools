@@ -25,7 +25,7 @@
             <div class="col">
                 <br>
                 <h3>Explore Solar Matching</h3>
-                <p>(Example demand profile, home lighting, appliances, cooking and a heat pump = 4012 kWh/year)</p>
+                <p>Explore how much home electric + heat pump demand can be met by solar and a battery.</p>
             </div>
         </div>
         <hr>
@@ -53,6 +53,45 @@
             </div>
 
         </div>
+
+        <div class="row">
+            <div class="col">
+                <label class="form-label">Standard electric</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="lac_demand" @change="update">
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Heat demand</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="heat_demand" @change="update">
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col-2">
+                <label class="form-label">SCOP</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="heatpump_scop" @change="update">
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Heatpump electric</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="heatpump_elec_kwh | toFixed(0)" disabled>
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+            <div class="col">
+                <label class="form-label">Total</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" :value="total_elec_kwh | toFixed(0)" disabled>
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
+        </div>
+
+
         <div class="row">
             <div class="col">
                 <label class="form-label">Battery</label>
@@ -82,7 +121,7 @@
                     <span class="input-group-text">p/kWh</span>
                 </div>
             </div>
-            <div class="col">
+            <div class="col-4">
                 <label class="form-label">Annual cost</label>
                 <div class="input-group mb-3">
                     <span class="input-group-text">£</span>
@@ -154,6 +193,13 @@
             solar_kWp: 4,
             solar_kWh_per_kWp: 870,
 
+            // demand
+            lac_demand: 1800,
+            heat_demand: 9000,
+            heatpump_scop: 4.0,
+            heatpump_elec_kwh: 0,
+            total_elec_kwh: 0,
+
             battery: {
                 capacity: 0,
                 soc: 0,
@@ -194,6 +240,9 @@
             },
             model: function() {
 
+                app.heatpump_elec_kwh = app.heat_demand / app.heatpump_scop;
+                app.total_elec_kwh = app.lac_demand + app.heatpump_elec_kwh;
+
                 var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
                 // reset for new calculation
@@ -224,17 +273,30 @@
 
                 // Normalise solar data to match solar_kWp
                 let input_solar_data_kwh = 0;
+                let input_lac_data_kwh = 0;
+                let input_heatpump_data_kwh = 0;
+
                 for (var i = 0; i < series[0].data.length; i++) {
                     let solarpv = series[0].data[i][1];
+                    let lac = series[1].data[i][1];
+                    let heatpump = series[2].data[i][1];
+
                     input_solar_data_kwh += solarpv * power_to_kwh;
+                    input_lac_data_kwh += lac * power_to_kwh;
+                    input_heatpump_data_kwh += heatpump * power_to_kwh;
                 }
                 var solar_normalisation_factor = app.solar_kWh_per_kWp / input_solar_data_kwh;
+                var lac_normalisation_factor = app.lac_demand / input_lac_data_kwh;
+                var heatpump_normalisation_factor = app.heatpump_elec_kwh / input_heatpump_data_kwh;
                 
                 for (var i = 0; i < series[0].data.length; i++) {
                     // Solar generation
                     let solarpv = series[0].data[i][1] * solar_normalisation_factor * app.solar_kWp;
                     // Demand
-                    let demand = series[1].data[i][1];
+                    let lac = series[1].data[i][1] * lac_normalisation_factor;
+                    let heatpump = series[2].data[i][1] * heatpump_normalisation_factor;
+
+                    let demand = lac + heatpump;
 
                     // Balance
                     var balance = solarpv - demand;
@@ -395,7 +457,7 @@
             }
         },
         mounted: function () {
-            feed.getdata("516488,516489","2023-01-01T00:00:00Z","2024-01-01T00:00:00Z",this.interval,1,function(result) {
+            feed.getdata("516488,516721,458771","2023-01-01T00:00:00Z","2024-01-01T00:00:00Z",this.interval,1,function(result) {
                 series = result;
                 app.update();
             });
