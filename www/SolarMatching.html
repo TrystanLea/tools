@@ -38,7 +38,17 @@
             <p>Monthly demand & generation (kWh):</p>
         </div>
         <div v-if="view=='power'">
-            <button class="btn btn-warning btn-sm" style="float:right" @click="draw_monthly_view">Monthly view</button>
+
+            <!-- button group nav + - < > -->
+            <div class="btn-group" style="float:right">
+                <button class="btn btn-secondary btn-sm" @click="zoom_in">+</button>
+                <button class="btn btn-secondary btn-sm" @click="zoom_out">-</button>
+
+                <button class="btn btn-secondary btn-sm" @click="pan_left"><</button>
+                <button class="btn btn-secondary btn-sm" @click="pan_right">></button>
+                <button class="btn btn-warning btn-sm" style="float:right" @click="draw_monthly_view">Monthly view</button>
+            </div>
+        
             <p>Power view (W):</p>
         </div>
         <div class="row">
@@ -556,7 +566,7 @@
                         data: timeseries(solar_data),
                         label: "Solar",
                         color: "#dccc1f",
-                        lines: { show: true, fill: 1.0, lineWidth: 0}
+                        lines: { show: true, fill: 0.8, lineWidth: 0}
                     }
                 ];
 
@@ -594,6 +604,24 @@
                 view.start = series[0].data[0][0];
                 view.end = series[0].data[series[0].data.length-1][0];
                 view.calc_interval(2400, 900);
+                app.draw_power_view();
+            },
+            zoom_out: function () {
+                view.zoomout();
+                view.calc_interval(2400, 900);
+                app.draw_power_view();
+            },
+            zoom_in: function () {
+                view.zoomin();
+                view.calc_interval(2400, 900);
+                app.draw_power_view();
+            },
+            pan_left: function () {
+                view.panleft();
+                app.draw_power_view();
+            },
+            pan_right: function () {
+                view.panright();
                 app.draw_power_view();
             }
         },
