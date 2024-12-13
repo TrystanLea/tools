@@ -156,8 +156,6 @@
             </div>
         </div>
 
-
-        
         <hr> 
         <div class="row">
             <div class="col">
@@ -200,6 +198,11 @@
     // Start by loading hourly average outside temperature data from emoncms.org API
     // Create basic Vue outline
     var series = [];
+
+    // Used for input data normalisation
+    var input_solar_data_kwh = 0;
+    var input_lac_data_kwh = 0;
+    var input_heatpump_data_kwh = 0;
 
     var app = new Vue({
         el: '#app',
@@ -288,24 +291,10 @@
 
                 let power_to_kwh = app.interval / 3600000;
 
-                // Normalise solar data to match solar_kWp
-                let input_solar_data_kwh = 0;
-                let input_lac_data_kwh = 0;
-                let input_heatpump_data_kwh = 0;
+                let solar_normalisation_factor = app.solar_kWh_per_kWp / input_solar_data_kwh;
+                let lac_normalisation_factor = app.lac_demand / input_lac_data_kwh;
+                let heatpump_normalisation_factor = app.heatpump_elec_kwh / input_heatpump_data_kwh;
 
-                for (var i = 0; i < series[0].data.length; i++) {
-                    let solarpv = series[0].data[i][1];
-                    let lac = series[1].data[i][1];
-                    let heatpump = series[2].data[i][1];
-
-                    input_solar_data_kwh += solarpv * power_to_kwh;
-                    input_lac_data_kwh += lac * power_to_kwh;
-                    input_heatpump_data_kwh += heatpump * power_to_kwh;
-                }
-                var solar_normalisation_factor = app.solar_kWh_per_kWp / input_solar_data_kwh;
-                var lac_normalisation_factor = app.lac_demand / input_lac_data_kwh;
-                var heatpump_normalisation_factor = app.heatpump_elec_kwh / input_heatpump_data_kwh;
-                
                 for (var i = 0; i < series[0].data.length; i++) {
                     // Solar generation
                     let solarpv = series[0].data[i][1] * solar_normalisation_factor * app.solar_kWp;
@@ -417,10 +406,9 @@
 
                 app.annual_cost = (app.annual_import_kwh * app.import_rate * 0.01) - (app.annual_export_kwh * app.export_rate * 0.01);
                 app.saving = 100*(1 - (app.annual_cost / (app.import_rate * app.annual_demand_kwh * 0.01)));
-
                 app.prc_from_solar = 100 * (app.annual_demand_kwh - app.annual_import_kwh) / app.annual_demand_kwh;
 
-                console.log(app.battery.soc);
+                console.log("End SOC: " + app.battery.soc.toFixed(2) + " kWh");
 
                 var plot_series = [
                     {
@@ -469,6 +457,24 @@
                 };
 
                 $.plot("#graph", plot_series, options);
+            },
+            normalise: function () {
+                // Normalise solar data to match solar_kWp
+                input_solar_data_kwh = 0;
+                input_lac_data_kwh = 0;
+                input_heatpump_data_kwh = 0;
+
+                let power_to_kwh = app.interval / 3600000;
+
+                for (var i = 0; i < series[0].data.length; i++) {
+                    let solarpv = series[0].data[i][1];
+                    let lac = series[1].data[i][1];
+                    let heatpump = series[2].data[i][1];
+
+                    input_solar_data_kwh += solarpv * power_to_kwh;
+                    input_lac_data_kwh += lac * power_to_kwh;
+                    input_heatpump_data_kwh += heatpump * power_to_kwh;
+                }
             }
         },
         filters: {
@@ -483,6 +489,7 @@
         mounted: function () {
             feed.getdata("516488,516721,458771","2023-01-01T00:00:00Z","2024-01-01T00:00:00Z",this.interval,1,function(result) {
                 series = result;
+                app.normalise();
                 app.update();
             });
         }
