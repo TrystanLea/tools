@@ -29,60 +29,83 @@
             </div>
         </div>
         <hr>
+
+
+        <p>Monthly demand & generation (kWh):</p>
         <div class="row">
             <div class="col">
+                <!-- A simple flot graph -->
+                <div id="graph" style="width:100%;height:350px;"></div>
+            </div>
+        </div>
+        <p>Demand from solar: <span><b>{{ prc_from_solar | toFixed(0)}} %</b></span></p>
+        <hr>
+
+        <p><b>Solar generation & battery:</b></p>
+
+        <div class="row">
+            <div class="col-lg-3 col-md-3 col-sm-12">
                 <label class="form-label">Solar kWp</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="solar_kWp" @change="update">
                     <span class="input-group-text">kW</span>
                 </div>
             </div>
-            <div class="col">
+            <div class="col-lg-3 col-md-3 col-sm-12">
                 <label class="form-label">Solar kWh/kWp</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="solar_kWh_per_kWp" @change="update">
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
-            <div class="col">
+            <div class="col-lg-3 col-md-3 col-sm-12">
                 <label class="form-label">Annual solar generation</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="annual_solar_kwh | toFixed(0)" disabled>
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
-
+            <div class="col-lg-3 col-md-3 col-sm-12">
+                <label class="form-label">Battery</label>
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" v-model.number="battery.capacity" @change="update">
+                    <span class="input-group-text">kWh</span>
+                </div>
+            </div>
         </div>
+        <hr>
+
+        <p><b>Electric demand & heat pump:</b></p>
 
         <div class="row">
-            <div class="col">
+            <div class="col-md col-sm-12">
                 <label class="form-label">Standard electric</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="lac_demand" @change="update">
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
-            <div class="col">
+            <div class="col-md col-sm-12">
                 <label class="form-label">Heat demand</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="heat_demand" @change="update">
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
-            <div class="col-2">
+            <div class="col-md-2 col-sm-12">
                 <label class="form-label">SCOP</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="heatpump_scop" @change="update">
                 </div>
             </div>
-            <div class="col">
+            <div class="col-md col-sm-12">
                 <label class="form-label">Heatpump electric</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="heatpump_elec_kwh | toFixed(0)" disabled>
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
-            <div class="col">
+            <div class="col-md col-sm-12">
                 <label class="form-label">Total</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="total_elec_kwh | toFixed(0)" disabled>
@@ -90,42 +113,42 @@
                 </div>
             </div>
         </div>
+        <hr>
 
+        <p><b>Electric cost and savings:</b></p>
 
         <div class="row">
-            <div class="col">
-                <label class="form-label">Battery</label>
-                <div class="input-group mb-3">
-                    <input type="text" class="form-control" v-model.number="battery.capacity" @change="update">
-                    <span class="input-group-text">kWh</span>
-                </div>
-            </div>
-            <div class="col" v-if="battery.capacity>100">
+            <div class="col-md col-sm-12" v-if="battery.capacity>100">
                 <label class="form-label">SOC Start</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="battery.soc_start" @change="update">
                     <span class="input-group-text">kWh</span>
                 </div>
             </div>
-            <div class="col">
+            <div class="col-md col-sm-12">
                 <label class="form-label">Import rate</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="import_rate" @change="update">
                     <span class="input-group-text">p/kWh</span>
                 </div>
             </div>
-            <div class="col">
+            <div class="col-md col-sm-12">
                 <label class="form-label">Export rate</label>
                 <div class="input-group mb-3">
                     <input type="text" class="form-control" v-model.number="export_rate" @change="update">
                     <span class="input-group-text">p/kWh</span>
                 </div>
             </div>
-            <div class="col-4">
+            <div class="col-md col-sm-12">
                 <label class="form-label">Annual cost</label>
                 <div class="input-group mb-3">
                     <span class="input-group-text">£</span>
                     <input type="text" class="form-control" :value="annual_cost | toFixed(0)" disabled>
+                </div>
+            </div>
+            <div class="col-md col-sm-12">
+                <label class="form-label">Saving</label>
+                <div class="input-group mb-3">
                     <input type="text" class="form-control" :value="saving | toFixed(0)" disabled>
                     <span class="input-group-text">%</span>
 
@@ -133,13 +156,6 @@
             </div>
         </div>
 
-
-        <div class="row">
-            <div class="col">
-                <!-- A simple flot graph -->
-                <div id="graph" style="width:100%;height:350px;"></div>
-            </div>
-        </div>
 
         
         <hr> 
@@ -174,7 +190,6 @@
                 </table>
             </div>
         </div>
-        <hr>
     </div>
 
 </body>
@@ -199,6 +214,8 @@
             heatpump_scop: 4.0,
             heatpump_elec_kwh: 0,
             total_elec_kwh: 0,
+
+            prc_from_solar: "---",
 
             battery: {
                 capacity: 0,
@@ -372,14 +389,16 @@
                     month = new Date(series[0].data[i][0]).getMonth();
                     if (month != lastMonth) {
 
+                        let xval =  lastMonth + 1;
+
                         let month_solar_self_use_kwh = month_solar_kwh - month_export_kwh;
 
-                        app.monthly_solar_kwh.push([lastMonth, month_solar_kwh]);
-                        app.monthly_solar_self_use_kwh.push([lastMonth, month_solar_self_use_kwh]);
-                        app.monthly_demand_kwh.push([lastMonth, month_demand_kwh]);
-                        app.monthly_export_kwh.push([lastMonth, month_export_kwh*-1]);
+                        app.monthly_solar_kwh.push([xval, month_solar_kwh]);
+                        app.monthly_solar_self_use_kwh.push([xval, month_solar_self_use_kwh]);
+                        app.monthly_demand_kwh.push([xval, month_demand_kwh]);
+                        app.monthly_export_kwh.push([xval, month_export_kwh*-1]);
 
-                        app.monthly_soc.push([lastMonth, app.battery.soc]);
+                        app.monthly_soc.push([xval, app.battery.soc]);
                         
                         app.monthly_table.push({
                             month: months[lastMonth],
@@ -397,7 +416,9 @@
                 }
 
                 app.annual_cost = (app.annual_import_kwh * app.import_rate * 0.01) - (app.annual_export_kwh * app.export_rate * 0.01);
-                app.saving = -1*100*(1 - (app.annual_cost / (app.import_rate * app.annual_demand_kwh * 0.01)));
+                app.saving = 100*(1 - (app.annual_cost / (app.import_rate * app.annual_demand_kwh * 0.01)));
+
+                app.prc_from_solar = 100 * (app.annual_demand_kwh - app.annual_import_kwh) / app.annual_demand_kwh;
 
 
                 var plot_series = [
@@ -432,6 +453,8 @@
 
                 var options = {
                     xaxis: {
+                        // time
+                        // mode: "time",
                     },
                     yaxis: {
                     },
