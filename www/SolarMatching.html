@@ -324,9 +324,9 @@
                             
                             // Charge battery
                             let charge = balance;
-                            if (charge > app.battery.charge_max) {
-                                charge = app.battery.charge_max;
-                            }
+                            // if (charge > app.battery.charge_max) {
+                            //     charge = app.battery.charge_max;
+                            // }
                             let charge_after_loss = charge * app.battery.charge_efficiency;
                             let soc_inc = charge_after_loss * power_to_kwh;
                             // Limit charge to battery capacity
@@ -344,9 +344,9 @@
                         } else {
                             // Discharge battery
                             let discharge = -balance;
-                            if (discharge > app.battery.discharge_max) {
-                                discharge = app.battery.discharge_max;
-                            }
+                            // if (discharge > app.battery.discharge_max) {
+                            //     discharge = app.battery.discharge_max;
+                            // }
                             let discharge_before_loss = discharge / app.battery.discharge_efficiency;
                             let soc_dec = discharge_before_loss * power_to_kwh;
                             // Limit discharge to battery SOC
