@@ -277,6 +277,12 @@
                 <b>Heat pump size*</b>
                 <h2>{{ totalHeatLoss*0.001*1.4 | toFixed(1) }} kW</h2>
             </div> 
+            <div class="col">
+                <b>Number of 1200x600 K2 radiators<br>
+                <span style="color:green">{{ rads40 | toFixed(1) }}x @ 40°C</span><br>
+                <span style="color:red">{{ rads50 | toFixed(1) }}x @ 50°C</span></b>
+            </div>
+
         </div>
         <p>* Heat pump sizing based on 40% margin to account for lower than datasheet average heat output during defrost conditions (typically 10-30%). Careful consideration based on available real world defrost output data required. Optimal margin will vary from one heat pump make & model to another and may vary in the 10-50% range.</p>
 
@@ -294,7 +300,12 @@
             <div class="col">
                 <b>Heat pump size</b>
                 <h2>{{ totalHeatLossCIBSE*0.001 | toFixed(1) }} kW</h2>
-            </div>             
+            </div>   
+            <div class="col">
+                <b>Number of 1200x600 K2 radiators<br>
+                <span style="color:green">{{ rads40_cibse | toFixed(1) }}x @ 40°C</span><br>
+                <span style="color:red">{{ rads50_cibse | toFixed(1) }}x @ 50°C</span></b>
+            </div>          
         </div>
 
 
@@ -394,7 +405,12 @@
 
             totalHeatLoss: 0,
             totalHeatLossCIBSE: 0,
-            Wm2: 0
+            Wm2: 0,
+            Wm2_cibse: 0,
+            rads40: 0,
+            rads50: 0,
+            rads40_cibse: 0,
+            rads50_cibse: 0
             
         },
         methods: {
@@ -429,6 +445,16 @@
                     this.external_wall_length = ((2 * width) + ((2 - party) * length)).toFixed(2);
                     this.party_wall_length = (length * party).toFixed(2);
                 }
+            },
+
+            calc_number_of_rads: function (total_heat_loss, design_flow_temperature, indoor_temperature) {
+                let DT1 = 5
+                let MWT = design_flow_temperature - DT1 / 2
+                let DT2 = MWT - indoor_temperature
+                let Rated_Heat_Output = total_heat_loss / ((DT2 / 50) ** 1.3)
+
+                let number_of_k2_1200x600 = Rated_Heat_Output / 2050
+                return number_of_k2_1200x600;
             },
 
             model: function() {
@@ -517,6 +543,9 @@
                 this.totalHeatLoss = totalHeatLoss;
                 this.Wm2 = totalHeatLoss / this.total_floor_area;
 
+                this.rads40 = this.calc_number_of_rads(totalHeatLoss, 40, this.boundaries['internal']);
+                this.rads50 = this.calc_number_of_rads(totalHeatLoss, 50, this.boundaries['internal']);
+
                 // ----------------------------
 
                 let cibse_air_change_rate = 0;
@@ -533,6 +562,9 @@
                 totalHeatLossCIBSE += cibse_infiltrationHeatLoss;
                 this.totalHeatLossCIBSE = totalHeatLossCIBSE;
                 this.Wm2_cibse = totalHeatLossCIBSE / this.total_floor_area;
+
+                this.rads40_cibse = this.calc_number_of_rads(totalHeatLossCIBSE, 40, this.boundaries_cibse['internal']);
+                this.rads50_cibse = this.calc_number_of_rads(totalHeatLossCIBSE, 50, this.boundaries_cibse['internal']);
             }
         },
         filters: {
