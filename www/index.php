@@ -13,25 +13,30 @@ $q = strtolower($q);
 $q = str_replace('.php', '', $q);
 $q = str_replace('.html', '', $q);
 
+// Default values
+$title = '404 - Page not found';
+$description = '';
+$content = '';
+$github = 'https://github.com/openenergymonitor/tools';
+
 // Check if page exists in menu
 if (isset($menu[$q])) {
     $title = $menu[$q]['title'];
     $description = $menu[$q]['description'];
+    $github .= "/tree/main/www/tools/$q";
     $path = "tools/$q/";
     $path_lib = "lib/";
     $content = view("tools/$q/$q.php", array(
         'path' => $path,
         'path_lib' => $path_lib
     ));
+
 } else if ($q == 'home') {
     $title = 'Tools';
-    $description = 'Open source tools to help with heat pump design and understanding.';
     $content = view('home.php', array(
         'menu' => $menu
     ));
 } else {
-    $title = '404 - Page not found';
-    $description = 'The page you are looking for does not exist.';
     $content = view('404.php');
 }
 
@@ -41,5 +46,5 @@ echo view("theme.php", array(
     'title' => $title,
     'description' => $description,
     'content' => $content,
-    'github' => 'https://github.com/trystanLea/tools'
+    'github' => $github
 ));
