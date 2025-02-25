@@ -1,0 +1,8 @@
+DirectoryIndex index.php
+<IfModule mod_rewrite.c>
+  RewriteEngine on
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_FILENAME} !-s
+  RewriteRule ^(.*)$ index.php?q=$1 [L,QSA]
+</IfModule>
