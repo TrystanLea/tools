@@ -5,6 +5,10 @@
 include 'core.php';
 include 'menu.php';
 
+// Connect to redis
+$redis = new Redis();
+$redis->connect('localhost');
+
 $q = $_GET['q'] ?? 'home';
 
 // change to lower case
@@ -30,13 +34,18 @@ if (isset($menu[$q])) {
         'path' => $path,
         'path_lib' => $path_lib
     ));
-
 } else if ($q == 'home') {
     $title = 'Tools';
-    $content = view('home.php', array(
+    $content = view('home_view.php', array(
         'menu' => $menu
     ));
+} else if ($q == 'stats') {
+    $title = 'Stats';
+    $content = view('stats_view.php', array(
+        'stats' => get_views($redis, $menu)
+    ));
 } else {
+    $q = '404';
     $content = view('404.php');
 }
 
@@ -48,3 +57,8 @@ echo view("theme.php", array(
     'content' => $content,
     'github' => $github
 ));
+
+// Increase view count to this page
+if ($redis && $q != 'stats') {
+    $redis->incr("tools:$q");
+}
