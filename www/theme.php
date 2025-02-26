@@ -31,6 +31,13 @@
                     <a href="<?php echo $value['case']; ?>" class="list-group-item list-group-item-action"><?php echo $value['title']; ?></a>
                 <?php endforeach; ?>
             </div>
+
+            <h5 class="mt-3">Other tools</h5>
+            <div class="list-group mt-3">
+                <a href="https://openenergymonitor.org/heatlossjs" class="list-group-item list-group-item-action">HeatLoss.js</a>
+                <a href="https://openenergymonitor.org/sapjs" class="list-group-item list-group-item-action">SAP.js</a>
+                <a href="https://openenergymonitor.org/zcem" class="list-group-item list-group-item-action">ZeroCarbonBritain energy model</a>
+            </div>
         </div>
     </div>
 
