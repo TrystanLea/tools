@@ -6,8 +6,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.time.min.js"></script> 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/flot/0.8.3/jquery.flot.selection.min.js"></script>
 
-<script src="tools/lib/ecodan.js?v=1"></script>
-<script src="tools/lib/feed.js?v=1"></script>
+<script src="<?php echo $path_lib;?>ecodan.js?v=1"></script>
+<script src="<?php echo $path_lib;?>feed.js?v=1"></script>
 
 <div class="container mt-3" style="max-width:800px" id="app">
     <div class="row">
