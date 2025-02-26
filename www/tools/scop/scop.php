@@ -14,6 +14,9 @@
         <div class="col">
             <h3>Heat Pump System Performance Calculator</h3>
             <p>Calculate heat pump SCOP based on design flow temperature.</p>
+            <div class="alert alert-warning"><i class="fa-solid fa-person-digging"></i> This tool is work in progress. 
+            It does not include performance loss due to defrosts and seems to over-predict performance for systems running at higher design flow temperatures.
+            </div>
         </div>
     </div>
     <hr>
@@ -119,6 +122,30 @@
             <label class="form-label">SCOP</label>
             <div class="input-group mb-3">
                 <input type="text" class="form-control" :value="annual_scop | toFixed(2)" disabled>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <label class="form-label">Weighted Flow Temp</label>
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" :value="weighted_flow_temp | toFixed(1)" disabled>
+                <span class="input-group-text">°C</span>
+            </div>
+        </div>
+        <div class="col">
+            <label class="form-label">Weighted Flow - Outside</label>
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" :value="weighted_flow_minus_outside | toFixed(1)" disabled>
+                <span class="input-group-text">°C</span>
+            </div>
+        </div>
+        <div class="col">
+            <label class="form-label">Weighted Outside Temp</label>
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" :value="weighted_outside | toFixed(1)" disabled>
+                <span class="input-group-text">°C</span>
             </div>
         </div>
     </div>
@@ -234,7 +261,11 @@
             annual_elec_kwh: 0,
             annual_scop: 0,
             monthly_table: [],
-            monthly_heat_demand: []
+            monthly_heat_demand: [],
+            // weighted
+            weighted_flow_temp: 0,
+            weighted_flow_minus_outside: 0,
+            weighted_outside: 0
         },
         methods: {
             update: function () {
@@ -290,6 +321,10 @@
 
                 let flowT_sum = 0;
                 let flowT_count = 0;
+
+                let flowT_weighted_sum = 0;
+                let flowT_minus_outside_weighted_sum = 0;
+                let outside_weighted_sum = 0;
                 
                 for (var i = 0; i < series[0].data.length; i++) {
                     let outsideTemp = series[0].data[i][1];
@@ -321,6 +356,10 @@
                     let flowTemp = MWT + (app.systemDT*0.5);
                     flowT_sum += flowTemp;
                     flowT_count ++;
+
+                    flowT_weighted_sum += flowTemp * (heatDemand / 1000);
+                    flowT_minus_outside_weighted_sum += (flowTemp - outsideTemp) * (heatDemand / 1000);
+                    outside_weighted_sum += outsideTemp * (heatDemand / 1000);
                     
                     let condensing_offset = 2;
                     let evaporating_offset = -6;
@@ -353,8 +392,10 @@
                         month_elec_kwh = 0;
                     }
                 }
-                
-                console.log(flowT_sum / flowT_count)
+
+                app.weighted_flow_temp = flowT_weighted_sum / app.annual_heat_kwh;
+                app.weighted_flow_minus_outside = flowT_minus_outside_weighted_sum / app.annual_heat_kwh;
+                app.weighted_outside = outside_weighted_sum / app.annual_heat_kwh;
 
                 app.annual_scop = app.annual_heat_kwh / app.annual_elec_kwh;
 
