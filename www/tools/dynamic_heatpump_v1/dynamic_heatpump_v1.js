@@ -52,13 +52,83 @@ var app = new Vue({
             heat_saving_prc: 0
         },
         refinements: 3,
-        max_room_temp: 0
+        max_room_temp: 0,
+        max_schedule_temp: 0
     },
     methods: {
         simulate: function () {
-            for (var i = 0; i < app.refinements; i++) {
-                sim();
+            console.log("Simulating");
+
+            // These only need to be calculated once
+            // Calculate heat loss coefficient
+            var sum = 0;
+            for (var z in app.building.fabric) {
+                sum += (1 / app.building.fabric[z].WK*1);
             }
+            app.building.fabric_WK = 1 / sum;
+
+            // Used for outside temperature waveform generation
+            var outside_min_time = time_str_to_hour(app.external.min_time);
+            app.external.min_time = hour_to_time_str(outside_min_time);
+            var outside_max_time = time_str_to_hour(app.external.max_time);
+            app.external.max_time = hour_to_time_str(outside_max_time);
+
+
+            // With user entered schedule
+            // First runs without recording time series data
+            for (var i = 0; i < (app.refinements-1); i++) {
+                sim({
+                    record_timeseries: false,
+                    outside_min_time: outside_min_time,
+                    outside_max_time: outside_max_time,
+                    schedule: app.schedule
+                });
+            }
+
+            // Record the time series data for the final run
+            var result = sim({
+                record_timeseries: true,
+                outside_min_time: outside_min_time,
+                outside_max_time: outside_max_time,
+                schedule: app.schedule
+            });
+            app.max_room_temp = result.max_room_temp;
+            app.results.elec_kwh = result.elec_kwh;
+            app.results.heat_kwh = result.heat_kwh;
+
+            console.log(result);
+
+            // Steady state comparison
+
+            // Get maximum room set point in app.schedule
+            let max_schedule_temp = 0;
+            for (let i = 0; i < app.schedule.length; i++) {
+                if (app.schedule[i].set_point > max_schedule_temp) {
+                    max_schedule_temp = app.schedule[i].set_point;
+                }
+            }
+            app.max_schedule_temp = max_schedule_temp;
+
+            var steady_state_schedule = [
+                // { start: "00:00", set_point: result.max_room_temp, flowT: 500, parallel_shift: 0 },
+                { start: "00:00", set_point: max_schedule_temp, flowT: 500, parallel_shift: 0 },
+            ];
+
+            var steady_state_result = false;
+            for (var i = 0; i < app.refinements; i++) {
+                steady_state_result = sim({
+                    record_timeseries: false,
+                    outside_min_time: outside_min_time,
+                    outside_max_time: outside_max_time,
+                    schedule: steady_state_schedule
+                });
+            }
+
+            console.log(steady_state_result)
+
+            app.results.elec_saving_prc = 100* (1-(app.results.elec_kwh / steady_state_result.elec_kwh))
+            app.results.heat_saving_prc = 100* (1-(app.results.heat_kwh / steady_state_result.heat_kwh))
+
             plot();
         },
         add_space: function () {
@@ -126,13 +196,20 @@ function update_fabric_starting_temperatures() {
     room = app.building.fabric[2].T;
 }
 
-function sim() {
-    roomT_data = [];
-    outsideT_data = [];
-    flowT_data = [];
-    returnT_data = [];
-    elec_data = [];
-    heat_data = [];
+function sim(conf) {
+
+    if (conf.record_timeseries) {
+        roomT_data = [];
+        outsideT_data = [];
+        flowT_data = [];
+        returnT_data = [];
+        elec_data = [];
+        heat_data = [];
+    }
+
+    var outside_min_time = conf.outside_min_time;
+    var outside_max_time = conf.outside_max_time;
+    var schedule = conf.schedule;
 
     // Layer 1:
     var u1 = app.building.fabric[0].WK;
@@ -144,20 +221,11 @@ function sim() {
     var u3 = app.building.fabric[2].WK;
     var k3 = 3600000 * app.building.fabric[2].kWhK;
 
-    // Calculate heat loss coefficient
-    var sum = 0;
-    for (var z in app.building.fabric) {
-        sum += (1 / app.building.fabric[z].WK*1);
-    }
-    app.building.fabric_WK = 1 / sum;
-
-    var start_t1 = t1;
-
     var timestep = 30;
     var itterations = 3600 * 24 * app.days / timestep;
 
-    app.results.elec_kwh = 0;
-    app.results.heat_kwh = 0;
+    var elec_kwh = 0;
+    var heat_kwh = 0;
 
     max_flowT = 0;
     setpoint = 0;
@@ -166,18 +234,14 @@ function sim() {
 
     var power_to_kwh = timestep / 3600000;
 
-    app.max_room_temp = 0;
+    var max_room_temp = 0;
     
     heatpump_state = 0;
     flow_temperature = room;
     return_temperature = room;
     MWT_off = 200;
     
-    // Used for outside temperature waveform generation
-    var outside_min_time = time_str_to_hour(app.external.min_time);
-    app.external.min_time = hour_to_time_str(outside_min_time)
-    var outside_max_time = time_str_to_hour(app.external.max_time);
-    app.external.max_time = hour_to_time_str(outside_max_time)
+
     var ramp_up = outside_max_time - outside_min_time;
     var ramp_down = 24 - ramp_up;
     
@@ -201,11 +265,11 @@ function sim() {
         last_setpoint = setpoint;
 
         // Load heating schedule
-        for (let j = 0; j < app.schedule.length; j++) {
-            let start = time_str_to_hour(app.schedule[j].start);
+        for (let j = 0; j < schedule.length; j++) {
+            let start = time_str_to_hour(schedule[j].start);
             if (hour >= start) {
-                setpoint = parseFloat(app.schedule[j].set_point);
-                max_flowT = parseFloat(app.schedule[j].flowT);
+                setpoint = parseFloat(schedule[j].set_point);
+                max_flowT = parseFloat(schedule[j].flowT);
             }
         }
         
@@ -310,8 +374,8 @@ function sim() {
         }
 
         // Calculate energy use
-        app.results.elec_kwh += heatpump_elec * power_to_kwh;
-        app.results.heat_kwh += heatpump_heat * power_to_kwh;
+        elec_kwh += heatpump_elec * power_to_kwh;
+        heat_kwh += heatpump_heat * power_to_kwh;
 
         // Building fabric model
 
@@ -325,32 +389,39 @@ function sim() {
         t2 += (h2 * timestep) / k2;
         t1 += (h1 * timestep) / k1;
 
-        if (room>app.max_room_temp){
-            app.max_room_temp = room;
+        if (room>max_room_temp){
+            max_room_temp = room;
         }
 
         // Populate time series data arrays for plotting
-        let timems = time*1000;
-        roomT_data.push([timems, room]);
-        outsideT_data.push([timems, outside]);
-        flowT_data.push([timems, flow_temperature]);
-        returnT_data.push([timems, return_temperature]);
-        elec_data.push([timems, heatpump_elec]);
-        heat_data.push([timems, heatpump_heat]);
+        if (conf.record_timeseries) {
+            let timems = time*1000;
+            roomT_data.push([timems, room]);
+            outsideT_data.push([timems, outside]);
+            flowT_data.push([timems, flow_temperature]);
+            returnT_data.push([timems, return_temperature]);
+            elec_data.push([timems, heatpump_elec]);
+            heat_data.push([timems, heatpump_heat]);
+        }
     }
 
-    // 
-    app.results.elec_kwh = app.results.elec_kwh / app.days;
-    app.results.heat_kwh = app.results.heat_kwh / app.days;
-
-    calculate_steady_state();
+    return {
+        elec_kwh: elec_kwh / app.days,
+        heat_kwh: heat_kwh / app.days,
+        max_room_temp: max_room_temp
+    }
     
     // Automatic refinement, disabled for now, running simulation 3 times instead.
     // if (Math.abs(start_t1 - t1) > hs * 1.0) sim();
 }
 
+
+
+// Simulation vs ideal steady state comparison does not work well as steady state calculation
+// does not capture things like mild weather cycling and other dynamic effects.
 function calculate_steady_state(){
     // Calculate steady state comparison
+    console.log(app.max_room_temp)
     let dT = app.max_room_temp - app.external.mid;
     let heat_demand = app.building.fabric_WK * dT;
     let heating_demand = heat_demand - app.building.internal_gains

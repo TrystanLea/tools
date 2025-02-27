@@ -35,7 +35,7 @@
         <div class="col">    
             <label class="form-label">Saving vs steady state</label>
             <div class="input-group mb-3">
-                <input type="text" class="form-control" :value="results.elec_saving_prc | toFixed(1)" disabled>
+                <input type="text" class="form-control" :value="results.elec_saving_prc | toFixed(2)" disabled>
                 <span class="input-group-text">%</span>
             </div>
         </div>
@@ -49,7 +49,7 @@
         <div class="col">
             <label class="form-label">Saving vs steady state</label>
             <div class="input-group mb-3">
-                <input type="text" class="form-control" :value="results.heat_saving_prc | toFixed(1)" disabled>            
+                <input type="text" class="form-control" :value="results.heat_saving_prc | toFixed(2)" disabled>            
                 <span class="input-group-text">%</span>
             </div>
         </div>
@@ -96,6 +96,8 @@
                                         class="fas fa-trash"></i></button></td>
                         </tr>
                     </table>
+
+                    <div class="alert alert-info"><b>Room temp reached maximum of: {{ max_room_temp | toFixed(2) }} °C.</b><br>Steady state comparison is based on {{ max_schedule_temp | toFixed(2) }} °C</div>
                 </div>
             </div>
             <br>
@@ -302,4 +304,4 @@
         </div>
     </div>
 </div>
-<script src="<?php echo $path; ?>dynamic_heatpump_v1.js?v=7"></script>
+<script src="<?php echo $path; ?>dynamic_heatpump_v1.js?v=9"></script>
